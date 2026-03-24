@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<title>Annai Mira AR - Department Scanner</title>
+
+<script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+html, body {
+  width:100%; height:100%;
+  overflow:hidden;
+  background:#000;
+}
+
+/* Camera background */
+#camera-bg {
+  position:fixed;
+  top:0; left:0;
+  width:100%; height:100%;
+  object-fit:cover;
+  z-index:1;
+}
+
+/* AR scene on top of camera */
+a-scene {
+  position:fixed !important;
+  top:0 !important; left:0 !important;
+  width:100vw !important; height:100vh !important;
+  z-index:2 !important;
+  background:transparent !important;
+  pointer-events:none;
+}
+a-scene canvas {
+  background:transparent !important;
+}
+
+/* Instruction text at bottom */
+.instruction-container {
+  position:fixed;
+  bottom:30px;
+  width:100%;
+  text-align:center;
+  z-index:20;
+  pointer-events:none;
+}
+.instruction-text {
+  font-size:1rem;
+  color:#4facfe;
+  background:rgba(0,0,0,0.7);
+  padding:10px 20px;
+  border-radius:10px;
+  border:1px solid #4facfe;
+  display:inline-block;
+  text-transform:uppercase;
+  letter-spacing:1px;
+}
+
+/* Department name banner — shown when a target is found */
+#dept-banner {
+  position:fixed;
+  bottom:80px;
+  width:100%;
+  text-align:center;
+  z-index:20;
+  pointer-events:none;
+  display:none;
+}
+#dept-banner span {
+  font-size:1.1rem;
+  font-weight:bold;
+  color:#fff;
+  padding:10px 26px;
+  border-radius:30px;
+  border:2px solid rgba(255,255,255,0.4);
+  backdrop-filter:blur(8px);
+  display:inline-block;
+}
+
+/* Unmute button */
+#unmute-btn {
+  position:fixed;
+  top:20px;
+  left:50%;
+  transform:translateX(-50%);
+  z-index:20;
+  background:rgba(0,0,0,0.75);
+  color:#fff;
+  border:1px solid #fff;
+  border-radius:8px;
+  padding:8px 18px;
+  font-size:.9rem;
+  cursor:pointer;
+  display:none;
+}
+</style>
+</head>
+
+<body>
+
+<!-- Real camera feed background -->
+<video id="camera-bg" autoplay playsinline muted></video>
+
+<!-- Unmute button (shown when audio locked) -->
+<button id="unmute-btn">🔊 Tap to Unmute</button>
+
+<!-- Department name banner -->
+<div id="dept-banner"><span id="dept-name"></span></div>
+
+<!-- Scanning instruction -->
+<div class="instruction-container" id="instruction-container">
+  <div class="instruction-text">📌 Scan a Department Badge</div>
+</div>
+
+<!--
+  ╔══════════════════════════════════════════════════════╗
+  ║  FOLDER STRUCTURE IN GITHUB:                         ║
+  ║                                                      ║
+  ║  /index.html                                         ║
+  ║  /targets/targets.mind                               ║
+  ║  /videos/                                            ║
+  ║      it.mp4   ai.mp4   cse.mp4                       ║
+  ║      eee.mp4  ece.mp4  mba.mp4                       ║
+  ║                                                      ║
+  ║  targetIndex ORDER must match the order you          ║
+  ║  uploaded images when compiling targets.mind:        ║
+  ║  0=IT  1=AI  2=CSE  3=EEE  4=ECE  5=MBA             ║
+  ╚══════════════════════════════════════════════════════╝
+-->
+
+<!-- Hidden video sources — one per department -->
+<video id="vid-it"  src="./videos/it.mp4"  preload="auto" loop muted playsinline webkit-playsinline></video>
+<video id="vid-ai"  src="./videos/ai.mp4"  preload="auto" loop muted playsinline webkit-playsinline></video>
+<video id="vid-cse" src="./videos/cse.mp4" preload="auto" loop muted playsinline webkit-playsinline></video>
+<video id="vid-eee" src="./videos/eee.mp4" preload="auto" loop muted playsinline webkit-playsinline></video>
+<video id="vid-ece" src="./videos/ece.mp4" preload="auto" loop muted playsinline webkit-playsinline></video>
+<video id="vid-mba" src="./videos/mba.mp4" preload="auto" loop muted playsinline webkit-playsinline></video>
+
+<!-- AR Scene -->
+<a-scene
+  mindar-image="imageTargetSrc: ./targets/targets.mind; uiScanning: no; uiLoading: no;"
+  vr-mode-ui="enabled:false"
+  device-orientation-permission-ui="enabled:true"
+  renderer="colorManagement:true; alpha:true; antialias:false;"
+  color-space="sRGB">
+
+  <a-camera position="0 0 0" look-controls="enabled:false"></a-camera>
+
+  <!-- IT — targetIndex 0 -->
+  <a-entity mindar-image-target="targetIndex:0" id="target-it">
+    <a-video id="ar-vid-it" src="#vid-it"
+      width="1.6" height="0.9"
+      position="0 0 0" visible="false">
+    </a-video>
+  </a-entity>
+
+  <!-- AI — targetIndex 1 -->
+  <a-entity mindar-image-target="targetIndex:1" id="target-ai">
+    <a-video id="ar-vid-ai" src="#vid-ai"
+      width="1.6" height="0.9"
+      position="0 0 0" visible="false">
+    </a-video>
+  </a-entity>
+
+  <!-- CSE — targetIndex 2 -->
+  <a-entity mindar-image-target="targetIndex:2" id="target-cse">
+    <a-video id="ar-vid-cse" src="#vid-cse"
+      width="1.6" height="0.9"
+      position="0 0 0" visible="false">
+    </a-video>
+  </a-entity>
+
+  <!-- EEE — targetIndex 3 -->
+  <a-entity mindar-image-target="targetIndex:3" id="target-eee">
+    <a-video id="ar-vid-eee" src="#vid-eee"
+      width="1.6" height="0.9"
+      position="0 0 0" visible="false">
+    </a-video>
+  </a-entity>
+
+  <!-- ECE — targetIndex 4 -->
+  <a-entity mindar-image-target="targetIndex:4" id="target-ece">
+    <a-video id="ar-vid-ece" src="#vid-ece"
+      width="1.6" height="0.9"
+      position="0 0 0" visible="false">
+    </a-video>
+  </a-entity>
+
+  <!-- MBA — targetIndex 5 -->
+  <a-entity mindar-image-target="targetIndex:5" id="target-mba">
+    <a-video id="ar-vid-mba" src="#vid-mba"
+      width="1.6" height="0.9"
+      position="0 0 0" visible="false">
+    </a-video>
+  </a-entity>
+
+</a-scene>
+
+<script>
+// ── Department config ───────────────────────────────────────────
+// Each entry maps: video element → a-video plane → entity → display name + color
+const DEPTS = [
+  { vidId:"vid-it",  planeId:"ar-vid-it",  entityId:"target-it",  name:"🖥️ Information Technology (IT)",  color:"#ec4899" },
+  { vidId:"vid-ai",  planeId:"ar-vid-ai",  entityId:"target-ai",  name:"🤖 Artificial Intelligence (AI)", color:"#f97316" },
+  { vidId:"vid-cse", planeId:"ar-vid-cse", entityId:"target-cse", name:"💻 Computer Science (CSE)",        color:"#8b5cf6" },
+  { vidId:"vid-eee", planeId:"ar-vid-eee", entityId:"target-eee", name:"⚡ Electrical Engineering (EEE)",  color:"#14b8a6" },
+  { vidId:"vid-ece", planeId:"ar-vid-ece", entityId:"target-ece", name:"📡 Electronics & Comm (ECE)",      color:"#ef4444" },
+  { vidId:"vid-mba", planeId:"ar-vid-mba", entityId:"target-mba", name:"📊 Business Administration (MBA)", color:"#06b6d4" },
+];
+
+// ── DOM refs ────────────────────────────────────────────────────
+const cameraBg   = document.getElementById("camera-bg");
+const instruction= document.getElementById("instruction-container");
+const deptBanner = document.getElementById("dept-banner");
+const deptName   = document.getElementById("dept-name");
+const unmuteBtn  = document.getElementById("unmute-btn");
+
+let audioUnlocked = false;
+let activeVideo   = null; // currently playing video element
+
+// ── Start real camera feed ──────────────────────────────────────
+async function startCamera() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: "environment" } },
+      audio: false
+    });
+    cameraBg.srcObject = stream;
+  } catch(err) {
+    console.warn("Camera error:", err);
+  }
+}
+startCamera();
+
+// ── Hide MindAR's internal video element ───────────────────────
+document.querySelector("a-scene").addEventListener("loaded", () => {
+  setTimeout(() => {
+    document.querySelectorAll("a-scene video").forEach(v => {
+      if (!v.id.startsWith("vid-")) v.style.display = "none";
+    });
+  }, 500);
+});
+
+// ── Unlock audio on first user tap ─────────────────────────────
+function unlockAudio() {
+  if (audioUnlocked) return;
+  audioUnlocked = true;
+
+  try {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (AC) new AC().resume();
+  } catch(e) {}
+
+  // Unmute whichever video is playing
+  if (activeVideo) {
+    activeVideo.muted = false;
+    if (activeVideo.paused) activeVideo.play().catch(() => {});
+  }
+  unmuteBtn.style.display = "none";
+}
+document.addEventListener("click",    unlockAudio);
+document.addEventListener("touchend", unlockAudio);
+
+// ── Wire up each department ─────────────────────────────────────
+DEPTS.forEach(dept => {
+  const video  = document.getElementById(dept.vidId);
+  const plane  = document.getElementById(dept.planeId);
+  const entity = document.getElementById(dept.entityId);
+
+  // TARGET FOUND → play this dept's video
+  entity.addEventListener("targetFound", () => {
+    activeVideo = video;
+
+    // Show AR video plane
+    plane.setAttribute("visible", true);
+
+    // Hide instruction, show dept banner
+    instruction.style.display = "none";
+    deptName.textContent       = dept.name;
+    deptBanner.querySelector("span").style.background = dept.color + "cc";
+    deptBanner.style.display   = "block";
+
+    // Play video
+    video.play().then(() => {
+      if (!audioUnlocked) unmuteBtn.style.display = "block";
+    }).catch(() => {
+      unmuteBtn.style.display = "block";
+    });
+
+    // Unmute if audio already unlocked
+    if (audioUnlocked) video.muted = false;
+  });
+
+  // TARGET LOST → stop this dept's video
+  entity.addEventListener("targetLost", () => {
+    plane.setAttribute("visible", false);
+    video.pause();
+    video.currentTime = 0;
+    video.muted = true; // reset mute for next scan
+
+    activeVideo = null;
+
+    // Show instruction again, hide banner
+    instruction.style.display = "block";
+    deptBanner.style.display  = "none";
+    unmuteBtn.style.display   = "none";
+  });
+});
+
+// ── iOS DeviceOrientation permission ───────────────────────────
+window.addEventListener("load", () => {
+  if (typeof DeviceOrientationEvent?.requestPermission === "function") {
+    const req = () => {
+      DeviceOrientationEvent.requestPermission()
+        .then(r => {
+          if (r === "granted")
+            window.addEventListener("deviceorientation", () => {});
+        })
+        .catch(console.error);
+      document.removeEventListener("touchend", req);
+    };
+    document.addEventListener("touchend", req);
+  }
+});
+</script>
+
+</body>
+</html>
