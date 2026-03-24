@@ -4,322 +4,549 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-<title>Annai Mira AR - Department Scanner</title>
+<title>Annai Mira AR — Department Explorer</title>
 
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 
 <style>
+:root {
+  --pink:   #ff3cac;
+  --violet: #784ba0;
+  --blue:   #2b86c5;
+  --teal:   #0ef0d0;
+  --bg:     #0a0616;
+}
 * { margin:0; padding:0; box-sizing:border-box; }
-html, body {
-  width:100%; height:100%;
+html, body { width:100%; height:100%; overflow:hidden; background:var(--bg); font-family:'DM Sans', sans-serif; }
+
+/* ══════════════════════════════════
+   SPLASH SCREEN
+══════════════════════════════════ */
+#splash {
+  position:fixed; inset:0; z-index:100;
+  display:flex; flex-direction:column;
+  align-items:center; justify-content:center;
+  background: radial-gradient(ellipse at 60% 30%, #1a0a3a 0%, #0a0616 60%);
   overflow:hidden;
-  background:#000;
 }
 
-/* Camera background */
+/* animated mesh background */
+#splash::before {
+  content:'';
+  position:absolute; inset:0;
+  background:
+    radial-gradient(circle at 20% 80%, rgba(255,60,172,0.18) 0%, transparent 50%),
+    radial-gradient(circle at 80% 20%, rgba(43,134,197,0.18) 0%, transparent 50%),
+    radial-gradient(circle at 50% 50%, rgba(120,75,160,0.12) 0%, transparent 60%);
+  animation: meshPulse 6s ease-in-out infinite alternate;
+}
+@keyframes meshPulse {
+  from { opacity:0.7; transform:scale(1); }
+  to   { opacity:1;   transform:scale(1.05); }
+}
+
+/* grid lines */
+#splash::after {
+  content:'';
+  position:absolute; inset:0;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+  background-size:40px 40px;
+  pointer-events:none;
+}
+
+.splash-content {
+  position:relative; z-index:2;
+  display:flex; flex-direction:column;
+  align-items:center; text-align:center;
+  padding:0 32px;
+  animation: fadeUp 0.9s cubic-bezier(.22,1,.36,1) both;
+}
+@keyframes fadeUp {
+  from { opacity:0; transform:translateY(32px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+
+/* badge / icon */
+.splash-badge {
+  width:80px; height:80px;
+  border-radius:24px;
+  background: linear-gradient(135deg, var(--pink), var(--violet), var(--blue));
+  display:flex; align-items:center; justify-content:center;
+  font-size:36px;
+  margin-bottom:28px;
+  box-shadow: 0 0 40px rgba(255,60,172,0.4), 0 0 80px rgba(43,134,197,0.2);
+  animation: badgePop 1s cubic-bezier(.34,1.56,.64,1) 0.2s both;
+}
+@keyframes badgePop {
+  from { opacity:0; transform:scale(0.5); }
+  to   { opacity:1; transform:scale(1); }
+}
+
+.splash-college {
+  font-family:'Syne', sans-serif;
+  font-size:0.75rem; font-weight:700;
+  letter-spacing:0.25em; text-transform:uppercase;
+  color:var(--teal);
+  margin-bottom:10px;
+  animation: fadeUp 0.9s cubic-bezier(.22,1,.36,1) 0.3s both;
+}
+
+.splash-title {
+  font-family:'Syne', sans-serif;
+  font-size:clamp(2rem, 8vw, 3rem);
+  font-weight:800; line-height:1.05;
+  background: linear-gradient(135deg, #fff 30%, var(--pink) 70%, var(--teal));
+  -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+  margin-bottom:12px;
+  animation: fadeUp 0.9s cubic-bezier(.22,1,.36,1) 0.4s both;
+}
+
+.splash-sub {
+  font-size:1rem; color:rgba(255,255,255,0.55);
+  font-weight:300; letter-spacing:0.02em;
+  margin-bottom:40px;
+  animation: fadeUp 0.9s cubic-bezier(.22,1,.36,1) 0.5s both;
+}
+
+/* dept pills */
+.dept-pills {
+  display:flex; flex-wrap:wrap; gap:8px;
+  justify-content:center;
+  margin-bottom:48px;
+  animation: fadeUp 0.9s cubic-bezier(.22,1,.36,1) 0.6s both;
+}
+.pill {
+  padding:5px 14px;
+  border-radius:20px;
+  font-size:0.72rem; font-weight:500;
+  letter-spacing:0.06em; text-transform:uppercase;
+  border:1px solid rgba(255,255,255,0.15);
+  color:rgba(255,255,255,0.7);
+  background:rgba(255,255,255,0.06);
+}
+.pill.it   { border-color:rgba(255,60,172,0.5);  color:#ff8cce; }
+.pill.ai   { border-color:rgba(249,115,22,0.5);  color:#fdba74; }
+.pill.cse  { border-color:rgba(139,92,246,0.5);  color:#c4b5fd; }
+.pill.eee  { border-color:rgba(20,184,166,0.5);  color:#5eead4; }
+.pill.ece  { border-color:rgba(239,68,68,0.5);   color:#fca5a5; }
+.pill.mba  { border-color:rgba(6,182,212,0.5);   color:#67e8f9; }
+
+/* CTA button */
+.start-btn {
+  position:relative; overflow:hidden;
+  padding:16px 48px;
+  border-radius:50px;
+  border:none; cursor:pointer;
+  font-family:'Syne', sans-serif;
+  font-size:1rem; font-weight:700;
+  letter-spacing:0.08em; text-transform:uppercase;
+  color:#fff;
+  background: linear-gradient(135deg, var(--pink), var(--violet), var(--blue));
+  box-shadow: 0 4px 30px rgba(255,60,172,0.4);
+  animation: fadeUp 0.9s cubic-bezier(.22,1,.36,1) 0.7s both;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.start-btn:active { transform:scale(0.97); }
+.start-btn::after {
+  content:'';
+  position:absolute; inset:0;
+  background:linear-gradient(135deg, rgba(255,255,255,0.15), transparent);
+  border-radius:inherit;
+}
+.start-btn .arrow { margin-left:10px; display:inline-block; transition:transform 0.2s; }
+.start-btn:hover .arrow { transform:translateX(4px); }
+
+.start-hint {
+  margin-top:16px;
+  font-size:0.72rem; color:rgba(255,255,255,0.3);
+  animation: fadeUp 0.9s cubic-bezier(.22,1,.36,1) 0.8s both;
+}
+
+/* ══════════════════════════════════
+   AR SCANNER SCREEN
+══════════════════════════════════ */
+#scanner-screen {
+  position:fixed; inset:0; z-index:50;
+  display:none;
+}
+
 #camera-bg {
-  position:fixed;
-  top:0; left:0;
+  position:fixed; inset:0;
   width:100%; height:100%;
-  object-fit:cover;
-  z-index:1;
+  object-fit:cover; z-index:1;
 }
-
-/* AR scene on top of camera */
 a-scene {
-  position:fixed !important;
-  top:0 !important; left:0 !important;
+  position:fixed !important; inset:0 !important;
   width:100vw !important; height:100vh !important;
   z-index:2 !important;
   background:transparent !important;
   pointer-events:none;
 }
-a-scene canvas {
-  background:transparent !important;
+a-scene canvas { background:transparent !important; }
+
+/* top bar */
+#scanner-header {
+  position:fixed; top:0; left:0; right:0;
+  z-index:20;
+  display:flex; align-items:center; justify-content:space-between;
+  padding:16px 20px;
+  background:linear-gradient(to bottom, rgba(10,6,22,0.85), transparent);
+}
+#scanner-header .brand {
+  font-family:'Syne', sans-serif;
+  font-size:0.9rem; font-weight:700;
+  color:#fff; letter-spacing:0.05em;
+}
+#back-btn {
+  background:rgba(255,255,255,0.12);
+  border:1px solid rgba(255,255,255,0.2);
+  color:#fff; border-radius:8px;
+  padding:6px 14px; font-size:0.8rem;
+  cursor:pointer; font-family:'DM Sans', sans-serif;
 }
 
-/* Instruction text at bottom */
-.instruction-container {
+/* scanner viewfinder ring */
+#viewfinder {
   position:fixed;
-  bottom:30px;
-  width:100%;
-  text-align:center;
-  z-index:20;
+  top:50%; left:50%;
+  transform:translate(-50%,-60%);
+  z-index:10;
+  width:220px; height:220px;
   pointer-events:none;
+}
+.vf-corner {
+  position:absolute;
+  width:36px; height:36px;
+  border-color:var(--teal);
+  border-style:solid;
+  opacity:0.9;
+}
+.vf-corner.tl { top:0;    left:0;  border-width:3px 0 0 3px; border-radius:6px 0 0 0; }
+.vf-corner.tr { top:0;    right:0; border-width:3px 3px 0 0; border-radius:0 6px 0 0; }
+.vf-corner.bl { bottom:0; left:0;  border-width:0 0 3px 3px; border-radius:0 0 0 6px; }
+.vf-corner.br { bottom:0; right:0; border-width:0 3px 3px 0; border-radius:0 0 6px 0; }
+#viewfinder.found .vf-corner { border-color:var(--pink); }
+
+/* scan line animation */
+#scan-line {
+  position:absolute; left:6px; right:6px; height:2px;
+  background:linear-gradient(90deg, transparent, var(--teal), transparent);
+  top:0;
+  animation:scanAnim 2s ease-in-out infinite;
+}
+#viewfinder.found #scan-line { display:none; }
+@keyframes scanAnim {
+  0%   { top:0;    opacity:0; }
+  10%  { opacity:1; }
+  90%  { opacity:1; }
+  100% { top:100%; opacity:0; }
+}
+
+/* instruction */
+#instruction-container {
+  position:fixed; bottom:100px; width:100%;
+  text-align:center; z-index:20; pointer-events:none;
 }
 .instruction-text {
-  font-size:1rem;
-  color:#4facfe;
-  background:rgba(0,0,0,0.7);
-  padding:10px 20px;
-  border-radius:10px;
-  border:1px solid #4facfe;
-  display:inline-block;
-  text-transform:uppercase;
-  letter-spacing:1px;
+  font-size:0.85rem; color:rgba(255,255,255,0.8);
+  background:rgba(10,6,22,0.75);
+  padding:10px 22px; border-radius:30px;
+  border:1px solid rgba(255,255,255,0.15);
+  display:inline-block; letter-spacing:0.04em;
+  backdrop-filter:blur(10px);
 }
 
-/* Department name banner — shown when a target is found */
+/* dept banner */
 #dept-banner {
-  position:fixed;
-  bottom:80px;
-  width:100%;
-  text-align:center;
-  z-index:20;
-  pointer-events:none;
-  display:none;
+  position:fixed; bottom:40px; width:100%;
+  text-align:center; z-index:20;
+  pointer-events:none; display:none;
 }
 #dept-banner span {
-  font-size:1.1rem;
-  font-weight:bold;
-  color:#fff;
-  padding:10px 26px;
-  border-radius:30px;
-  border:2px solid rgba(255,255,255,0.4);
-  backdrop-filter:blur(8px);
+  font-family:'Syne', sans-serif;
+  font-size:0.95rem; font-weight:700;
+  color:#fff; padding:12px 28px;
+  border-radius:40px;
+  border:2px solid rgba(255,255,255,0.3);
+  backdrop-filter:blur(12px);
   display:inline-block;
+  letter-spacing:0.03em;
 }
 
-/* Unmute button */
+/* unmute button */
 #unmute-btn {
-  position:fixed;
-  top:20px;
-  left:50%;
+  position:fixed; top:70px; left:50%;
   transform:translateX(-50%);
   z-index:20;
-  background:rgba(0,0,0,0.75);
+  background:rgba(10,6,22,0.85);
   color:#fff;
-  border:1px solid #fff;
-  border-radius:8px;
-  padding:8px 18px;
-  font-size:.9rem;
-  cursor:pointer;
+  border:1px solid rgba(255,255,255,0.3);
+  border-radius:10px; padding:9px 20px;
+  font-size:0.85rem; cursor:pointer;
+  display:none; backdrop-filter:blur(10px);
+}
+
+/* ══════════════════════════════════
+   PERMISSION SCREEN
+══════════════════════════════════ */
+#perm-screen {
+  position:fixed; inset:0; z-index:80;
   display:none;
+  flex-direction:column; align-items:center; justify-content:center;
+  background:rgba(10,6,22,0.97);
+  padding:40px;
+  text-align:center;
+}
+.perm-icon { font-size:56px; margin-bottom:20px; }
+.perm-title {
+  font-family:'Syne', sans-serif;
+  font-size:1.4rem; font-weight:800; color:#fff;
+  margin-bottom:12px;
+}
+.perm-text {
+  font-size:0.9rem; color:rgba(255,255,255,0.5);
+  margin-bottom:36px; line-height:1.7; max-width:280px;
+}
+.perm-btn {
+  padding:14px 40px; border-radius:40px;
+  background:linear-gradient(135deg, var(--pink), var(--blue));
+  border:none; color:#fff; cursor:pointer;
+  font-family:'Syne', sans-serif;
+  font-size:0.95rem; font-weight:700;
+  letter-spacing:0.06em;
 }
 </style>
 </head>
-
 <body>
 
-<!-- Real camera feed background -->
-<video id="camera-bg" autoplay playsinline muted></video>
+<!-- ══ SPLASH SCREEN ══ -->
+<div id="splash">
+  <div class="splash-content">
+    <div class="splash-badge">🎓</div>
+    <div class="splash-college">Annai Mira College of Engineering</div>
+    <h1 class="splash-title">AR Department<br>Explorer</h1>
+    <p class="splash-sub">Scan any department badge on the roadmap poster<br>to explore its journey in augmented reality.</p>
 
-<!-- Unmute button (shown when audio locked) -->
-<button id="unmute-btn">🔊 Tap to Unmute</button>
+    <div class="dept-pills">
+      <span class="pill it">🖥 IT</span>
+      <span class="pill ai">🤖 AI</span>
+      <span class="pill cse">💻 CSE</span>
+      <span class="pill eee">⚡ EEE</span>
+      <span class="pill ece">📡 ECE</span>
+      <span class="pill mba">📊 MBA</span>
+    </div>
 
-<!-- Department name banner -->
-<div id="dept-banner"><span id="dept-name"></span></div>
-
-<!-- Scanning instruction -->
-<div class="instruction-container" id="instruction-container">
-  <div class="instruction-text">📌 Scan a Department Badge</div>
+    <button class="start-btn" onclick="startAR()">
+      Open Scanner <span class="arrow">→</span>
+    </button>
+    <p class="start-hint">Camera access required</p>
+  </div>
 </div>
 
-<!--
-  ╔══════════════════════════════════════════════════════╗
-  ║  FOLDER STRUCTURE IN GITHUB:                         ║
-  ║                                                      ║
-  ║  /index.html                                         ║
-  ║  /targets/targets.mind                               ║
-  ║  /videos/                                            ║
-  ║      it.mp4   ai.mp4   cse.mp4                       ║
-  ║      eee.mp4  ece.mp4  mba.mp4                       ║
-  ║                                                      ║
-  ║  targetIndex ORDER must match the order you          ║
-  ║  uploaded images when compiling targets.mind:        ║
-  ║  0=IT  1=AI  2=CSE  3=EEE  4=ECE  5=MBA             ║
-  ╚══════════════════════════════════════════════════════╝
--->
+<!-- ══ CAMERA PERMISSION SCREEN ══ -->
+<div id="perm-screen">
+  <div class="perm-icon">📷</div>
+  <div class="perm-title">Camera Access Needed</div>
+  <p class="perm-text">To scan department badges, please allow camera access when your browser asks.</p>
+  <button class="perm-btn" onclick="launchScanner()">Allow &amp; Continue →</button>
+</div>
 
-<!-- Hidden video sources — one per department -->
-<video id="vid-it"  src="./videos/it.mp4"  preload="auto" loop muted playsinline webkit-playsinline></video>
-<video id="vid-ai"  src="./videos/ai.mp4"  preload="auto" loop muted playsinline webkit-playsinline></video>
-<video id="vid-cse" src="./videos/cse.mp4" preload="auto" loop muted playsinline webkit-playsinline></video>
-<video id="vid-eee" src="./videos/eee.mp4" preload="auto" loop muted playsinline webkit-playsinline></video>
-<video id="vid-ece" src="./videos/ece.mp4" preload="auto" loop muted playsinline webkit-playsinline></video>
-<video id="vid-mba" src="./videos/mba.mp4" preload="auto" loop muted playsinline webkit-playsinline></video>
+<!-- ══ SCANNER SCREEN ══ -->
+<div id="scanner-screen">
+  <video id="camera-bg" autoplay playsinline muted></video>
+  <button id="unmute-btn">🔊 Tap to Unmute</button>
+  <div id="dept-banner"><span id="dept-name"></span></div>
 
-<!-- AR Scene -->
-<a-scene
-  mindar-image="imageTargetSrc: ./targets/targets.mind; uiScanning: no; uiLoading: no;"
-  vr-mode-ui="enabled:false"
-  device-orientation-permission-ui="enabled:true"
-  renderer="colorManagement:true; alpha:true; antialias:false;"
-  color-space="sRGB">
+  <!-- Header -->
+  <div id="scanner-header">
+    <div class="brand">🎓 Annai Mira AR</div>
+    <button id="back-btn" onclick="goBack()">✕ Exit</button>
+  </div>
 
-  <a-camera position="0 0 0" look-controls="enabled:false"></a-camera>
+  <!-- Viewfinder -->
+  <div id="viewfinder">
+    <div class="vf-corner tl"></div>
+    <div class="vf-corner tr"></div>
+    <div class="vf-corner bl"></div>
+    <div class="vf-corner br"></div>
+    <div id="scan-line"></div>
+  </div>
 
-  <!-- IT — targetIndex 0 -->
-  <a-entity mindar-image-target="targetIndex:0" id="target-it">
-    <a-video id="ar-vid-it" src="#vid-it"
-      width="1.6" height="0.9"
-      position="0 0 0" visible="false">
-    </a-video>
-  </a-entity>
+  <!-- Instruction -->
+  <div class="instruction-container" id="instruction-container">
+    <div class="instruction-text">📌 Point at a department badge</div>
+  </div>
 
-  <!-- AI — targetIndex 1 -->
-  <a-entity mindar-image-target="targetIndex:1" id="target-ai">
-    <a-video id="ar-vid-ai" src="#vid-ai"
-      width="1.6" height="0.9"
-      position="0 0 0" visible="false">
-    </a-video>
-  </a-entity>
+  <!--
+    ╔═══════════════════════════════════════════════════╗
+    ║  VIDEO FILES — place in ROOT of your GitHub repo  ║
+    ║                                                   ║
+    ║  it.mp4   ai.mp4   cse.mp4                        ║
+    ║  eee.mp4  ece.mp4  mba.mp4                        ║
+    ║                                                   ║
+    ║  targets.mind also in ROOT                        ║
+    ╚═══════════════════════════════════════════════════╝
+  -->
+  <video id="vid-it"  src="./it.mp4"  preload="auto" loop muted playsinline webkit-playsinline></video>
+  <video id="vid-ai"  src="./ai.mp4"  preload="auto" loop muted playsinline webkit-playsinline></video>
+  <video id="vid-cse" src="./cse.mp4" preload="auto" loop muted playsinline webkit-playsinline></video>
+  <video id="vid-eee" src="./eee.mp4" preload="auto" loop muted playsinline webkit-playsinline></video>
+  <video id="vid-ece" src="./ece.mp4" preload="auto" loop muted playsinline webkit-playsinline></video>
+  <video id="vid-mba" src="./mba.mp4" preload="auto" loop muted playsinline webkit-playsinline></video>
 
-  <!-- CSE — targetIndex 2 -->
-  <a-entity mindar-image-target="targetIndex:2" id="target-cse">
-    <a-video id="ar-vid-cse" src="#vid-cse"
-      width="1.6" height="0.9"
-      position="0 0 0" visible="false">
-    </a-video>
-  </a-entity>
+  <!-- AR Scene -->
+  <a-scene
+    mindar-image="imageTargetSrc: ./targets.mind; uiScanning: no; uiLoading: no;"
+    vr-mode-ui="enabled:false"
+    device-orientation-permission-ui="enabled:true"
+    renderer="colorManagement:true; alpha:true; antialias:false;"
+    color-space="sRGB">
 
-  <!-- EEE — targetIndex 3 -->
-  <a-entity mindar-image-target="targetIndex:3" id="target-eee">
-    <a-video id="ar-vid-eee" src="#vid-eee"
-      width="1.6" height="0.9"
-      position="0 0 0" visible="false">
-    </a-video>
-  </a-entity>
+    <a-camera position="0 0 0" look-controls="enabled:false"></a-camera>
 
-  <!-- ECE — targetIndex 4 -->
-  <a-entity mindar-image-target="targetIndex:4" id="target-ece">
-    <a-video id="ar-vid-ece" src="#vid-ece"
-      width="1.6" height="0.9"
-      position="0 0 0" visible="false">
-    </a-video>
-  </a-entity>
+    <a-entity mindar-image-target="targetIndex:0" id="target-it">
+      <a-video id="ar-vid-it"  src="#vid-it"  width="1.6" height="0.9" position="0 0 0" visible="false"></a-video>
+    </a-entity>
+    <a-entity mindar-image-target="targetIndex:1" id="target-ai">
+      <a-video id="ar-vid-ai"  src="#vid-ai"  width="1.6" height="0.9" position="0 0 0" visible="false"></a-video>
+    </a-entity>
+    <a-entity mindar-image-target="targetIndex:2" id="target-cse">
+      <a-video id="ar-vid-cse" src="#vid-cse" width="1.6" height="0.9" position="0 0 0" visible="false"></a-video>
+    </a-entity>
+    <a-entity mindar-image-target="targetIndex:3" id="target-eee">
+      <a-video id="ar-vid-eee" src="#vid-eee" width="1.6" height="0.9" position="0 0 0" visible="false"></a-video>
+    </a-entity>
+    <a-entity mindar-image-target="targetIndex:4" id="target-ece">
+      <a-video id="ar-vid-ece" src="#vid-ece" width="1.6" height="0.9" position="0 0 0" visible="false"></a-video>
+    </a-entity>
+    <a-entity mindar-image-target="targetIndex:5" id="target-mba">
+      <a-video id="ar-vid-mba" src="#vid-mba" width="1.6" height="0.9" position="0 0 0" visible="false"></a-video>
+    </a-entity>
 
-  <!-- MBA — targetIndex 5 -->
-  <a-entity mindar-image-target="targetIndex:5" id="target-mba">
-    <a-video id="ar-vid-mba" src="#vid-mba"
-      width="1.6" height="0.9"
-      position="0 0 0" visible="false">
-    </a-video>
-  </a-entity>
-
-</a-scene>
+  </a-scene>
+</div><!-- /scanner-screen -->
 
 <script>
-// ── Department config ───────────────────────────────────────────
-// Each entry maps: video element → a-video plane → entity → display name + color
 const DEPTS = [
-  { vidId:"vid-it",  planeId:"ar-vid-it",  entityId:"target-it",  name:"🖥️ Information Technology (IT)",  color:"#ec4899" },
-  { vidId:"vid-ai",  planeId:"ar-vid-ai",  entityId:"target-ai",  name:"🤖 Artificial Intelligence (AI)", color:"#f97316" },
-  { vidId:"vid-cse", planeId:"ar-vid-cse", entityId:"target-cse", name:"💻 Computer Science (CSE)",        color:"#8b5cf6" },
-  { vidId:"vid-eee", planeId:"ar-vid-eee", entityId:"target-eee", name:"⚡ Electrical Engineering (EEE)",  color:"#14b8a6" },
-  { vidId:"vid-ece", planeId:"ar-vid-ece", entityId:"target-ece", name:"📡 Electronics & Comm (ECE)",      color:"#ef4444" },
-  { vidId:"vid-mba", planeId:"ar-vid-mba", entityId:"target-mba", name:"📊 Business Administration (MBA)", color:"#06b6d4" },
+  { vidId:"vid-it",  planeId:"ar-vid-it",  entityId:"target-it",  name:"🖥️ IT Department",   color:"#ec4899" },
+  { vidId:"vid-ai",  planeId:"ar-vid-ai",  entityId:"target-ai",  name:"🤖 AI Department",   color:"#f97316" },
+  { vidId:"vid-cse", planeId:"ar-vid-cse", entityId:"target-cse", name:"💻 CSE Department",  color:"#8b5cf6" },
+  { vidId:"vid-eee", planeId:"ar-vid-eee", entityId:"target-eee", name:"⚡ EEE Department",  color:"#14b8a6" },
+  { vidId:"vid-ece", planeId:"ar-vid-ece", entityId:"target-ece", name:"📡 ECE Department",  color:"#ef4444" },
+  { vidId:"vid-mba", planeId:"ar-vid-mba", entityId:"target-mba", name:"📊 MBA Department",  color:"#06b6d4" },
 ];
 
-// ── DOM refs ────────────────────────────────────────────────────
-const cameraBg   = document.getElementById("camera-bg");
-const instruction= document.getElementById("instruction-container");
-const deptBanner = document.getElementById("dept-banner");
-const deptName   = document.getElementById("dept-name");
-const unmuteBtn  = document.getElementById("unmute-btn");
-
 let audioUnlocked = false;
-let activeVideo   = null; // currently playing video element
+let activeVideo   = null;
+let scannerLaunched = false;
 
-// ── Start real camera feed ──────────────────────────────────────
-async function startCamera() {
+// ── Navigation ─────────────────────────────────────────────────
+function startAR() {
+  document.getElementById("splash").style.display = "none";
+  document.getElementById("perm-screen").style.display = "flex";
+}
+
+function goBack() {
+  location.reload();
+}
+
+async function launchScanner() {
+  document.getElementById("perm-screen").style.display = "none";
+  document.getElementById("scanner-screen").style.display = "block";
+
+  // Start real camera background
   try {
     const stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: { ideal: "environment" } },
-      audio: false
+      video: { facingMode: { ideal: "environment" } }, audio: false
     });
-    cameraBg.srcObject = stream;
+    document.getElementById("camera-bg").srcObject = stream;
   } catch(err) {
     console.warn("Camera error:", err);
   }
+
+  // Hide MindAR's internal video after load
+  document.querySelector("a-scene").addEventListener("loaded", () => {
+    setTimeout(() => {
+      document.querySelectorAll("a-scene video").forEach(v => {
+        if (!v.id.startsWith("vid-")) v.style.display = "none";
+      });
+    }, 500);
+  });
+
+  // Wire up departments
+  if (!scannerLaunched) {
+    scannerLaunched = true;
+    wireDepts();
+  }
 }
-startCamera();
 
-// ── Hide MindAR's internal video element ───────────────────────
-document.querySelector("a-scene").addEventListener("loaded", () => {
-  setTimeout(() => {
-    document.querySelectorAll("a-scene video").forEach(v => {
-      if (!v.id.startsWith("vid-")) v.style.display = "none";
+// ── Dept wiring ─────────────────────────────────────────────────
+function wireDepts() {
+  DEPTS.forEach(dept => {
+    const video  = document.getElementById(dept.vidId);
+    const plane  = document.getElementById(dept.planeId);
+    const entity = document.getElementById(dept.entityId);
+
+    entity.addEventListener("targetFound", () => {
+      activeVideo = video;
+      plane.setAttribute("visible", true);
+
+      document.getElementById("instruction-container").style.display = "none";
+      document.getElementById("dept-name").textContent = dept.name;
+      document.getElementById("dept-banner").querySelector("span").style.background = dept.color + "cc";
+      document.getElementById("dept-banner").style.display = "block";
+
+      document.getElementById("viewfinder").classList.add("found");
+
+      video.play().then(() => {
+        if (!audioUnlocked) document.getElementById("unmute-btn").style.display = "block";
+      }).catch(() => {
+        document.getElementById("unmute-btn").style.display = "block";
+      });
+
+      if (audioUnlocked) video.muted = false;
     });
-  }, 500);
-});
 
-// ── Unlock audio on first user tap ─────────────────────────────
+    entity.addEventListener("targetLost", () => {
+      plane.setAttribute("visible", false);
+      video.pause(); video.currentTime = 0; video.muted = true;
+      activeVideo = null;
+
+      document.getElementById("instruction-container").style.display = "block";
+      document.getElementById("dept-banner").style.display = "none";
+      document.getElementById("unmute-btn").style.display = "none";
+      document.getElementById("viewfinder").classList.remove("found");
+    });
+  });
+}
+
+// ── Unlock audio ────────────────────────────────────────────────
 function unlockAudio() {
   if (audioUnlocked) return;
   audioUnlocked = true;
-
   try {
     const AC = window.AudioContext || window.webkitAudioContext;
     if (AC) new AC().resume();
   } catch(e) {}
-
-  // Unmute whichever video is playing
   if (activeVideo) {
     activeVideo.muted = false;
     if (activeVideo.paused) activeVideo.play().catch(() => {});
   }
-  unmuteBtn.style.display = "none";
+  document.getElementById("unmute-btn").style.display = "none";
 }
 document.addEventListener("click",    unlockAudio);
 document.addEventListener("touchend", unlockAudio);
 
-// ── Wire up each department ─────────────────────────────────────
-DEPTS.forEach(dept => {
-  const video  = document.getElementById(dept.vidId);
-  const plane  = document.getElementById(dept.planeId);
-  const entity = document.getElementById(dept.entityId);
-
-  // TARGET FOUND → play this dept's video
-  entity.addEventListener("targetFound", () => {
-    activeVideo = video;
-
-    // Show AR video plane
-    plane.setAttribute("visible", true);
-
-    // Hide instruction, show dept banner
-    instruction.style.display = "none";
-    deptName.textContent       = dept.name;
-    deptBanner.querySelector("span").style.background = dept.color + "cc";
-    deptBanner.style.display   = "block";
-
-    // Play video
-    video.play().then(() => {
-      if (!audioUnlocked) unmuteBtn.style.display = "block";
-    }).catch(() => {
-      unmuteBtn.style.display = "block";
-    });
-
-    // Unmute if audio already unlocked
-    if (audioUnlocked) video.muted = false;
-  });
-
-  // TARGET LOST → stop this dept's video
-  entity.addEventListener("targetLost", () => {
-    plane.setAttribute("visible", false);
-    video.pause();
-    video.currentTime = 0;
-    video.muted = true; // reset mute for next scan
-
-    activeVideo = null;
-
-    // Show instruction again, hide banner
-    instruction.style.display = "block";
-    deptBanner.style.display  = "none";
-    unmuteBtn.style.display   = "none";
-  });
-});
-
-// ── iOS DeviceOrientation permission ───────────────────────────
+// ── iOS DeviceOrientation ────────────────────────────────────────
 window.addEventListener("load", () => {
   if (typeof DeviceOrientationEvent?.requestPermission === "function") {
     const req = () => {
       DeviceOrientationEvent.requestPermission()
-        .then(r => {
-          if (r === "granted")
-            window.addEventListener("deviceorientation", () => {});
-        })
+        .then(r => { if (r === "granted") window.addEventListener("deviceorientation", () => {}); })
         .catch(console.error);
       document.removeEventListener("touchend", req);
     };
@@ -327,6 +554,5 @@ window.addEventListener("load", () => {
   }
 });
 </script>
-
 </body>
 </html>
