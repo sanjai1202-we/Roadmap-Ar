@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Annai Mira — AR Roadmap</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@300;400;500;600&family=Barlow+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --black:  #0a0a0a;
+  --gold:   #f0b429;
+  --gold2:  #ffd060;
+  --white:  #ffffff;
+  --muted:  rgba(255,255,255,0.55);
+  --grid-line: rgba(255,255,255,0.045);
+}
+
+html, body {
+  height: 100%;
+  background: var(--black);
+  color: var(--white);
+  font-family: 'Barlow', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+
+/* ── Grid background ── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+  background-size: 48px 48px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ── Gold glow behind logo ── */
+body::after {
+  content: '';
+  position: fixed;
+  top: 0; left: 50%;
+  transform: translateX(-50%);
+  width: 340px;
+  height: 260px;
+  background: radial-gradient(ellipse 55% 45% at 50% 30%, rgba(240,180,41,0.18) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ── Page ── */
+#home-page {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100dvh;
+  padding: 32px 24px 36px;
+  gap: 0;
+}
+
+/* ── Logo ── */
+.logo-wrap {
+  position: relative;
+  width: 148px;
+  height: 148px;
+  margin-bottom: 28px;
+  flex-shrink: 0;
+}
+.logo-glow {
+  position: absolute;
+  inset: -12px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(240,180,41,0.22) 0%, transparent 70%);
+  animation: pulseGlow 3s ease-in-out infinite;
+}
+@keyframes pulseGlow {
+  0%, 100% { opacity: 0.7; transform: scale(1); }
+  50%       { opacity: 1;   transform: scale(1.06); }
+}
+.logo-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2.5px solid rgba(240,180,41,0.7);
+  box-shadow: 0 0 18px rgba(240,180,41,0.35), inset 0 0 12px rgba(240,180,41,0.1);
+}
+.logo-img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+  background: #1a1208;
+  /* Initials fallback via CSS */
+}
+.logo-initials {
+  position: absolute;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: #1a1208;
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 42px;
+  color: var(--gold);
+  letter-spacing: 0.04em;
+}
+
+/* ── College name ── */
+.college-name {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(52px, 14vw, 88px);
+  letter-spacing: 0.06em;
+  color: var(--gold);
+  text-align: center;
+  line-height: 0.95;
+  text-shadow: 0 0 60px rgba(240,180,41,0.25);
+  margin-bottom: 6px;
+}
+
+/* ── AR Roadmap subtitle ── */
+.ar-subtitle {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: clamp(14px, 4vw, 20px);
+  font-weight: 600;
+  letter-spacing: 0.38em;
+  text-transform: uppercase;
+  color: var(--white);
+  text-align: center;
+  margin-bottom: 22px;
+}
+
+/* ── Tamil tagline ── */
+.tamil-line {
+  font-size: clamp(11px, 3vw, 14px);
+  font-weight: 300;
+  color: var(--muted);
+  text-align: center;
+  letter-spacing: 0.04em;
+  margin-bottom: 6px;
+}
+
+/* ── English description ── */
+.desc-line {
+  font-size: clamp(12px, 3vw, 14px);
+  font-weight: 300;
+  color: var(--muted);
+  text-align: center;
+  line-height: 1.55;
+  margin-bottom: 28px;
+  max-width: 320px;
+}
+
+/* ── Department pills ── */
+.dept-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 36px;
+  max-width: 400px;
+}
+.dept-pill {
+  padding: 7px 18px;
+  border-radius: 999px;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+  border: 1.5px solid;
+  transition: transform 0.18s, filter 0.18s;
+  -webkit-tap-highlight-color: transparent;
+}
+.dept-pill:active { transform: scale(0.94); }
+.dept-pill:hover  { filter: brightness(1.2); transform: translateY(-2px); }
+
+/* Exact colors matching the screenshot */
+.pill-it  { color: #c084fc; border-color: #7c3aed; background: rgba(124,58,237,0.15); }
+.pill-ai  { color: #fb923c; border-color: #ea580c; background: rgba(234,88,12,0.15); }
+.pill-cse { color: #818cf8; border-color: #4338ca; background: rgba(67,56,202,0.15); }
+.pill-eee { color: #34d399; border-color: #059669; background: rgba(5,150,105,0.15); }
+.pill-ece { color: #f87171; border-color: #dc2626; background: rgba(220,38,38,0.15); }
+.pill-mba { color: #67e8f9; border-color: #0891b2; background: rgba(8,145,178,0.15); }
+
+/* ── CTA Button ── */
+.scan-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  width: min(340px, 88vw);
+  height: 62px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #f0b429 0%, #ffd060 45%, #e8a020 100%);
+  border: none;
+  cursor: pointer;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #111;
+  box-shadow: 0 4px 32px rgba(240,180,41,0.35), 0 0 0 0 rgba(240,180,41,0.4);
+  animation: btnPulse 2.8s ease-in-out infinite;
+  transition: transform 0.15s, box-shadow 0.15s;
+  -webkit-tap-highlight-color: transparent;
+  margin-bottom: 32px;
+  position: relative;
+  overflow: hidden;
+}
+@keyframes btnPulse {
+  0%, 100% { box-shadow: 0 4px 32px rgba(240,180,41,0.35), 0 0 0 0 rgba(240,180,41,0.35); }
+  50%       { box-shadow: 0 4px 40px rgba(240,180,41,0.55), 0 0 0 10px rgba(240,180,41,0); }
+}
+.scan-btn::after {
+  content: '';
+  position: absolute;
+  top: 0; left: -100%;
+  width: 60%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.28), transparent);
+  animation: sweep 3s ease-in-out infinite;
+}
+@keyframes sweep {
+  0%   { left: -100%; }
+  40%  { left: 120%; }
+  100% { left: 120%; }
+}
+.scan-btn:active { transform: scale(0.96); }
+
+/* play triangle icon */
+.play-icon {
+  width: 0; height: 0;
+  border-style: solid;
+  border-width: 7px 0 7px 13px;
+  border-color: transparent transparent transparent #111;
+  flex-shrink: 0;
+  margin-left: 2px;
+}
+
+/* ── Footer ── */
+.home-footer {
+  font-size: 12px;
+  font-weight: 400;
+  color: rgba(255,255,255,0.38);
+  text-align: center;
+  letter-spacing: 0.04em;
+}
+.home-footer a {
+  color: var(--gold);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+/* ── Entrance stagger ── */
+.fade-up {
+  opacity: 0;
+  transform: translateY(16px);
+  animation: fadeUp 0.55s cubic-bezier(0.22,1,0.36,1) forwards;
+}
+@keyframes fadeUp { to { opacity: 1; transform: translateY(0); } }
+.d1 { animation-delay: 0.05s; }
+.d2 { animation-delay: 0.15s; }
+.d3 { animation-delay: 0.25s; }
+.d4 { animation-delay: 0.35s; }
+.d5 { animation-delay: 0.45s; }
+.d6 { animation-delay: 0.55s; }
+.d7 { animation-delay: 0.65s; }
+</style>
+</head>
+<body>
+
+<div id="home-page">
+
+  <!-- Logo -->
+  <div class="logo-wrap fade-up d1">
+    <div class="logo-glow"></div>
+    <div class="logo-ring"></div>
+    <img class="logo-img" id="college-logo" src="" alt="Annai Mira College Logo">
+    <div class="logo-initials" id="logo-fallback">AM</div>
+  </div>
+
+  <!-- Big title -->
+  <h1 class="college-name fade-up d2">Annai Mira</h1>
+
+  <!-- AR Roadmap -->
+  <p class="ar-subtitle fade-up d3">AR &nbsp;Roadmap</p>
+
+  <!-- Tamil tagline -->
+  <p class="tamil-line fade-up d4">முயற்சி · பயிற்சி · உழைப்பு</p>
+
+  <!-- English description -->
+  <p class="desc-line fade-up d4">
+    Point your camera at a department logo<br>to explore your career path in AR
+  </p>
+
+  <!-- Department pills -->
+  <div class="dept-row fade-up d5">
+    <span class="dept-pill pill-it">IT</span>
+    <span class="dept-pill pill-ai">AI</span>
+    <span class="dept-pill pill-cse">CSE</span>
+    <span class="dept-pill pill-eee">EEE</span>
+    <span class="dept-pill pill-ece">ECE</span>
+    <span class="dept-pill pill-mba">MBA</span>
+  </div>
+
+  <!-- CTA -->
+  <button class="scan-btn fade-up d6" id="start-scan-btn">
+    <span class="play-icon"></span>
+    Start Scanning
+  </button>
+
+  <!-- Footer -->
+  <p class="home-footer fade-up d7">
+    Annai Mira College of Engg. &amp; Tech. &nbsp;·&nbsp; <a href="https://amcet.in" target="_blank">amcet.in</a>
+  </p>
+
+</div>
+
+<script>
+  /* ── Logo embed ── */
+  (function() {
+    const img = document.getElementById('college-logo');
+    const fallback = document.getElementById('logo-fallback');
+
+    // PASTE YOUR LOGO BASE64 HERE between the quotes:
+    const logoB64 = '';  // e.g. '/9j/4AAQ...'
+    const logoType = 'jpeg'; // or 'png'
+
+    if (logoB64) {
+      img.src = 'data:image/' + logoType + ';base64,' + logoB64;
+      img.onerror = function() {
+        img.style.display = 'none';
+        fallback.style.display = 'flex';
+      };
+    } else {
+      img.style.display = 'none';
+      fallback.style.display = 'flex';
+    }
+  })();
+
+  /* ── Scan button ── */
+  document.getElementById('start-scan-btn').addEventListener('click', function() {
+    // showPage('scanner-page');  ← your existing navigation call
+    console.log('Start scanning');
+  });
+</script>
+
+</body>
+</html>
