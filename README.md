@@ -2,7 +2,7 @@
 
 > **Augmented Reality career roadmap explorer** — point your phone at a department logo and instantly watch an immersive video roadmap appear in AR.
 
-[![Live Demo](https://img.shields.io/badge/Live%20Demo-GitHub%20Pages-black?style=for-the-badge&logo=github)](https://your-github-username.github.io/Roadmap-Ar/)
+[![Live Demo](https://sanjai1202-we.github.io/Roadmap-Ar/)
 [![PWA Ready](https://img.shields.io/badge/PWA-Ready-5A0FC8?style=for-the-badge&logo=pwa)](https://web.dev/progressive-web-apps/)
 [![AR Powered](https://img.shields.io/badge/AR-MindAR%20%2B%20A--Frame-00D8FF?style=for-the-badge)](https://hiukim.github.io/mind-ar-js-doc/)
 [![No Backend](https://img.shields.io/badge/Backend-None%20Required-brightgreen?style=for-the-badge)](https://github.com/)
@@ -146,55 +146,6 @@ Page transitions use CSS `opacity` + `transform` with no framework overhead.
 
 ---
 
-## 🔧 How to Add a New Department
-
-**Step 1 — Add your logo** to the `targets.mind` file  
-*(Regenerate using [MindAR image target compiler](https://hiukim.github.io/mind-ar-js-doc/tools/compile))*
-
-**Step 2 — Add video** as `deptname.mp4` to the root directory
-
-**Step 3 — Register in `index.html`**:
-```javascript
-// Add to TARGETS array
-{idx: 6, id: 'target-mech', src: 'mech.mp4', name: 'Mechanical Engineering', color: '#f59e0b'},
-```
-
-**Step 4 — Add a pill** in the Home page HTML:
-```html
-<span class="pill pill-mech">MECH</span>
-```
-
----
-
-## 📱 Browser Support
-
-| Browser | AR Support |
-|---|---|
-| Chrome Android | ✅ Full |
-| Safari iOS (16.4+) | ✅ Full |
-| Chrome Desktop | ✅ (webcam) |
-| Firefox | ⚠️ Limited WebXR support |
-
-**Minimum requirements:** HTTPS, camera permission, WebGL 2.0
-
----
-
-## 🎨 Design System
-
-```css
-/* Color Tokens */
---gold:   #f5c842   /* Primary accent */
---dark:   #0a0a0f   /* Background */
---card:   #12121a   /* Surface */
---text:   #f0eee8   /* Body text */
---muted:  rgba(240,238,232,0.45)
-
-/* Typography */
-font-family: 'Bebas Neue'   /* Display headings */
-font-family: 'Outfit'       /* Body & UI */
-```
-
----
 
 ## 🙋 Built By
 
@@ -203,8 +154,8 @@ font-family: 'Outfit'       /* Body & UI */
 > This project was built as part of real-world AR application development exploring **no-install WebAR**, computer-vision-driven UI, and performance-optimized single-file web apps.
 
 **Connect:**
-- 🔗 [LinkedIn](https://linkedin.com/in/your-profile)
-- 💻 [GitHub](https://github.com/your-username)
+- 🔗 [LinkedIn](https://www.linkedin.com/in/sanjai-ramesh)
+- 💻 [GitHub](https://github.com/sanjai1202-we)
 - 🌐 [Portfolio](https://nimble-clafoutis-b9bef2.netlify.app)
 
 ---
