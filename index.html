@@ -1026,6 +1026,44 @@
       font-size:12px; color:rgba(255,255,255,.5);
       letter-spacing:.08em;
     }
+    .nav-dir-card {
+      background:rgba(0,0,0,.78); border-radius:20px; padding:16px 20px; margin:0 16px;
+      display:flex; align-items:center; gap:16px;
+      backdrop-filter:blur(14px); border:1px solid rgba(255,255,255,.13);
+      box-shadow:0 8px 32px rgba(0,0,0,.55);
+    }
+    .nav-dir-icon {
+      width:64px; height:64px; border-radius:50%;
+      display:flex; align-items:center; justify-content:center;
+      font-size:32px; flex-shrink:0;
+      background:var(--di,#f5c842); box-shadow:0 0 24px var(--di,#f5c842);
+      animation:diPulse 1.6s ease-in-out infinite;
+    }
+    @keyframes diPulse {
+      0%,100%{transform:scale(1)} 50%{transform:scale(1.09)}
+    }
+    .nav-dir-text { flex:1; min-width:0 }
+    .nav-dir-main { font-family:'Bebas Neue',sans-serif; font-size:clamp(22px,6vw,30px); letter-spacing:.06em; color:#fff; line-height:1 }
+    .nav-dir-sub  { font-size:13px; color:rgba(255,255,255,.72); margin-top:4px; line-height:1.4 }
+    .nav-dir-dist { font-family:'Bebas Neue',sans-serif; font-size:18px; color:var(--di,#f5c842); margin-top:6px }
+    .nav-next-btn {
+      width:calc(100% - 32px); margin:10px 16px 0; padding:17px 24px;
+      background:linear-gradient(135deg,rgba(245,200,66,.96),rgba(234,155,0,.96));
+      border:none; border-radius:50px; color:#111;
+      font-family:'Bebas Neue',sans-serif; font-size:21px; letter-spacing:.15em;
+      cursor:pointer; display:flex; align-items:center; justify-content:center; gap:12px;
+      box-shadow:0 4px 24px rgba(245,200,66,.45); transition:transform .14s;
+      pointer-events:all; -webkit-tap-highlight-color:transparent;
+    }
+    .nav-next-btn:active { transform:scale(.95) }
+    .nav-floor-arrow {
+      position:absolute; bottom:285px; left:50%;
+      transform:translateX(-50%); z-index:2; pointer-events:none;
+      animation:floorBob 1.2s ease-in-out infinite;
+    }
+    @keyframes floorBob {
+      0%,100%{transform:translateX(-50%) translateY(0)} 50%{transform:translateX(-50%) translateY(-14px)}
+    }
 
     /* ── ARRIVED PAGE ── */
     #page-arrived {
@@ -1158,28 +1196,40 @@
   <div id="page-nav" class="page hidden">
     <video id="nav-camera" autoplay playsinline muted webkit-playsinline></video>
     <canvas id="nav-canvas"></canvas>
+    <!-- Floating directional arrow (Google Maps style) -->
+    <div class="nav-floor-arrow">
+      <svg id="nav-floor-svg" width="90" height="130" viewBox="0 0 90 130" style="filter:drop-shadow(0 0 16px #f5c842); transform-origin: center; transition: transform 0.7s cubic-bezier(.34,1.56,.64,1);">
+        <polygon points="45,6 86,66 62,66 62,122 28,122 28,66 4,66" fill="#f5c842" id="nav-arrow-poly"/>
+      </svg>
+    </div>
     <div class="nav-hud">
       <div class="nav-topbar">
         <div class="nav-dest-badge">
           <div class="nav-dest-dot" id="nav-dot"></div>
           <span class="nav-dest-name" id="nav-dest-name">Destination</span>
         </div>
-        <button class="nav-exit-btn" id="nav-exit-btn">✕ Exit</button>
+        <button class="nav-exit-btn" id="nav-exit-btn">&#10005; Exit</button>
       </div>
-      <div class="nav-center">
-        <div class="nav-arrow-wrap" id="nav-arrow-wrap">
-          <svg class="nav-arrow-svg" id="nav-arrow-svg" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="40" cy="40" r="38" fill="rgba(0,0,0,0.5)" stroke="rgba(255,255,255,0.2)" stroke-width="1.5"/>
-            <path id="nav-arrow-path" d="M40 20 L58 52 L40 44 L22 52 Z" fill="#f5c842"/>
-          </svg>
-        </div>
-        <div class="nav-instruction" id="nav-instruction">GO STRAIGHT</div>
-        <div class="nav-sub-instruction" id="nav-sub">Keep walking forward</div>
-        <div class="nav-distance-badge" id="nav-dist">-- m</div>
-      </div>
+      <div style="flex:1"></div>
       <div class="nav-bottom">
-        <div class="nav-steps-row" id="nav-steps"></div>
-        <div class="nav-eta" id="nav-eta">Calculating route...</div>
+        <!-- Google Maps style direction card -->
+        <div class="nav-dir-card">
+          <div class="nav-dir-icon" id="nav-dir-icon">&#8593;</div>
+          <div class="nav-dir-text">
+            <div class="nav-dir-main" id="nav-instruction">GO STRAIGHT</div>
+            <div class="nav-dir-sub"  id="nav-sub">Keep walking forward</div>
+            <div class="nav-dir-dist" id="nav-dist">-- m</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;justify-content:center;margin:10px 0 2px">
+          <div class="nav-steps-row" id="nav-steps"></div>
+        </div>
+        <div class="nav-eta" style="text-align:center" id="nav-eta">Calculating...</div>
+        <!-- Big NEXT button - tap when you reach this point -->
+        <button class="nav-next-btn" id="nav-next-btn">
+          <span style="font-size:26px">&#8594;</span>
+          <span id="nav-next-label">REACHED HERE - NEXT STEP</span>
+        </button>
       </div>
     </div>
   </div>
@@ -1301,6 +1351,7 @@
         if (!el) return;
         el.addEventListener('targetFound', function() {
           if (navActive) return;
+          if (document.getElementById('page-building').classList.contains('active')) return;
           currentTarget = t;
           clearTimeout(hideTimeout);
           document.getElementById('badge-dot').style.background = t.color;
@@ -1313,6 +1364,7 @@
         });
         el.addEventListener('targetLost', function() {
           if (navActive) return;
+          if (document.getElementById('page-building').classList.contains('active')) return;
           clearTimeout(hideTimeout);
           document.getElementById('dept-badge').classList.remove('visible');
           document.getElementById('scan-hint').style.display = '';
@@ -1331,6 +1383,11 @@
       var bKey = TARGET_BUILDING_MAP[target.id] || 'kamarajar';
       var bld  = BUILDINGS[bKey];
       if (!bld) return;
+      
+      // Hide scanner badge and show scan hint for next time
+      document.getElementById('dept-badge').classList.remove('visible');
+      document.getElementById('scan-hint').style.display = '';
+
       document.getElementById('building-icon').textContent  = bld.icon;
       document.getElementById('building-title').textContent = bld.name;
       var grid = document.getElementById('rooms-grid');
@@ -1354,8 +1411,42 @@
     document.getElementById('building-back-btn').addEventListener('click', function(){ navActive = false; showPage('page-scanner'); });
 
     // AR NAVIGATION ENGINE
-    var navStream = null, navStepIdx = 0, navStepsArr = [], navDistTimer = null;
-    var navStepTimer = null, navRoom = null, navAnimFrame = null;
+    // ════════ NAV STATE ════════
+    var navStream = null, navStepIdx = 0, navStepsArr = [], navRoom = null, navAnimFrame = null;
+
+    // Direction icons for Google Maps style card
+    var DIR_ICON = { straight: "↑", left: "←", right: "→", arrive: "✓" };
+
+    // ── Stop MindAR scene so camera is released ──
+    function stopARScene() {
+      try {
+        var scene = document.querySelector('a-scene');
+        if (scene) {
+          try { scene.systems['mindar-image-system'].stop(); } catch(e){}
+          try { scene.pause(); } catch(e){}
+        }
+      } catch(e){}
+      
+      // Stop all active camera tracks to release device camera lock
+      try {
+        var videos = document.querySelectorAll('video');
+        videos.forEach(function(vid) {
+          if (vid.id !== 'nav-camera' && vid.srcObject) {
+            try {
+              var stream = vid.srcObject;
+              if (stream.getTracks) {
+                stream.getTracks().forEach(function(t) { t.stop(); });
+              }
+            } catch(e){}
+            vid.srcObject = null;
+          }
+        });
+      } catch(e){}
+
+      var mount = document.getElementById('ar-mount');
+      if (mount) mount.innerHTML = '';
+      arReady = false;  // Force rebuild next time user scans
+    }
 
     function selectRoom(room) {
       navActive = true;
@@ -1368,6 +1459,12 @@
     function startNavigation() {
       document.getElementById('nav-dest-name').textContent = navRoom.name;
       document.getElementById('nav-dot').style.background  = navRoom.color;
+      // Update arrow + dir icon color to room color
+      document.getElementById('nav-arrow-poly').setAttribute('fill', navRoom.color);
+      document.getElementById('nav-dir-icon').style.setProperty('--di', navRoom.color);
+      document.getElementById('nav-dir-icon').style.background = navRoom.color;
+      document.getElementById('nav-floor-svg').style.filter = 'drop-shadow(0 0 18px ' + navRoom.color + ')';
+      // Build step dots
       var stepsRow = document.getElementById('nav-steps');
       stepsRow.innerHTML = '';
       navStepsArr.forEach(function(s, i) {
@@ -1377,43 +1474,53 @@
         stepsRow.appendChild(d);
       });
       showPage('page-nav');
-      startNavCamera().then(function(){ goToStep(0); }).catch(function(){ goToStep(0); });
+      // Stop MindAR first, THEN open rear camera
+      stopARScene();
+      setTimeout(function() {
+        startNavCamera()
+          .then(function(){ goToStep(0); })
+          .catch(function(){ goToStep(0); });
+      }, 400);
     }
 
     function startNavCamera() {
       return new Promise(function(resolve, reject) {
         stopNavCamera();
-        if (!navigator.mediaDevices) { reject(); return; }
-        navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false })
-          .then(function(stream) {
-            navStream = stream;
-            var vid = document.getElementById('nav-camera');
-            vid.srcObject = stream;
-            vid.play().catch(function(){});
-            vid.addEventListener('loadedmetadata', function() {
-              var c = document.getElementById('nav-canvas');
-              c.width  = vid.videoWidth  || window.innerWidth;
-              c.height = vid.videoHeight || window.innerHeight;
-              startCanvasLoop(c);
-            }, { once: true });
-            resolve();
-          }).catch(reject);
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { reject(); return; }
+        navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: 'environment' }, width:{ ideal:1280 }, height:{ ideal:720 } },
+          audio: false
+        }).then(function(stream) {
+          navStream = stream;
+          var vid = document.getElementById('nav-camera');
+          vid.srcObject = stream;
+          vid.play().catch(function(){});
+          vid.addEventListener('loadedmetadata', function() {
+            var c = document.getElementById('nav-canvas');
+            c.width  = vid.videoWidth  || window.innerWidth;
+            c.height = vid.videoHeight || window.innerHeight;
+            startCanvasVignette(c);
+          }, { once: true });
+          resolve();
+        }).catch(reject);
       });
     }
 
     function stopNavCamera() {
       if (navStream) { navStream.getTracks().forEach(function(t){ t.stop(); }); navStream = null; }
       cancelAnimationFrame(navAnimFrame);
+      var vid = document.getElementById('nav-camera');
+      if (vid) { vid.srcObject = null; }
     }
 
-    function startCanvasLoop(c) {
+    function startCanvasVignette(c) {
       function draw() {
         navAnimFrame = requestAnimationFrame(draw);
         var ctx = c.getContext('2d');
         ctx.clearRect(0, 0, c.width, c.height);
-        var g = ctx.createLinearGradient(0, c.height * 0.55, 0, c.height);
+        var g = ctx.createLinearGradient(0, c.height * 0.5, 0, c.height);
         g.addColorStop(0, 'rgba(0,0,0,0)');
-        g.addColorStop(1, 'rgba(0,0,0,0.6)');
+        g.addColorStop(1, 'rgba(0,0,0,0.65)');
         ctx.fillStyle = g;
         ctx.fillRect(0, 0, c.width, c.height);
       }
@@ -1421,45 +1528,65 @@
     }
 
     function goToStep(idx) {
-      clearTimeout(navDistTimer); clearTimeout(navStepTimer);
       if (idx >= navStepsArr.length) { stopNavCamera(); showArrived(); return; }
       navStepIdx = idx;
       var step = navStepsArr[idx];
-      var rot  = ARROW_PATHS[step.dir] ? ARROW_PATHS[step.dir].rot : 0;
-      var svg  = document.getElementById('nav-arrow-svg');
+      var isLast = (idx === navStepsArr.length - 1);
+
+      // Rotate the floating SVG arrow
+      var rot = ARROW_PATHS[step.dir] ? ARROW_PATHS[step.dir].rot : 0;
+      var svg = document.getElementById('nav-floor-svg');
+      svg.style.transition = 'transform 0.7s cubic-bezier(.34,1.56,.64,1)';
       svg.style.transform  = 'rotate(' + rot + 'deg)';
-      svg.style.transition = 'transform 0.6s cubic-bezier(.34,1.56,.64,1)';
-      var path = document.getElementById('nav-arrow-path');
-      if (path && navRoom) path.setAttribute('fill', navRoom.color);
+
+      // Direction card icon
+      var iconEl = document.getElementById('nav-dir-icon');
+      var dirMap = { straight:'↑', left:'←', right:'→', arrive:'📍' };
+      iconEl.innerHTML = dirMap[step.dir] || '↑';
+
+      // Text updates
       document.getElementById('nav-instruction').textContent = step.label;
       document.getElementById('nav-sub').textContent         = step.sub;
       document.getElementById('nav-dist').textContent        = step.dist + ' m';
+
+      // ETA
       var remDist = 0;
       for (var k = idx; k < navStepsArr.length; k++) remDist += navStepsArr[k].dist;
       var etaSec = Math.round(remDist / 1.2);
       document.getElementById('nav-eta').textContent =
         'Est. ' + (etaSec > 60 ? Math.round(etaSec/60)+' min' : etaSec+' sec') + ' to destination';
+
+      // Progress dots
       navStepsArr.forEach(function(_, i) {
         var dot = document.getElementById('step-dot-' + i);
         if (!dot) return;
         dot.classList.remove('active','done');
-        if (i < idx) dot.classList.add('done');
+        if      (i < idx)  dot.classList.add('done');
         else if (i === idx) dot.classList.add('active');
       });
-      var dist = step.dist;
-      function tick() {
-        dist = Math.max(0, dist - 1);
-        document.getElementById('nav-dist').textContent = dist + ' m';
-        if (dist <= 0) { navStepTimer = setTimeout(function(){ goToStep(idx+1); }, 1200); return; }
-        navDistTimer = setTimeout(tick, 400);
-      }
-      navDistTimer = setTimeout(tick, 400);
+
+      // Update NEXT button label
+      var lbl = document.getElementById('nav-next-label');
+      if (lbl) lbl.textContent = isLast ? 'I AM HERE - ARRIVED!' : 'REACHED HERE - NEXT STEP';
     }
 
+    // NEXT STEP button — manual advance
+    document.getElementById('nav-next-btn').addEventListener('click', function() {
+      goToStep(navStepIdx + 1);
+    });
+    document.getElementById('nav-next-btn').addEventListener('touchstart', function(e) {
+      e.preventDefault(); e.stopPropagation(); goToStep(navStepIdx + 1);
+    }, { passive: false });
+
+    // Exit nav
     document.getElementById('nav-exit-btn').addEventListener('click', function() {
       navActive = false;
-      clearTimeout(navDistTimer); clearTimeout(navStepTimer);
-      stopNavCamera(); showPage('page-scanner');
+      stopNavCamera();
+      showPage('page-scanner');
+      // Rebuild MindAR for next scan
+      setTimeout(function() {
+        if (!arReady) { buildARScene(); arReady = true; }
+      }, 500);
     });
 
     // ARRIVED PAGE
