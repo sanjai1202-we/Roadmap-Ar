@@ -1261,7 +1261,7 @@
       { idx: 2, id: 'target-tperiyar', src: 'main.mp4', name: 'Kamaraj Block', color: '#a78bfa' },
     ];
 
-    let currentTarget = null, hideTimeout = null, arReady = false;
+    let currentTarget = null, hideTimeout = null, arReady = false, navActive = false;
 
     // ══════════ PAGES ══════════
     function showPage(id) {
@@ -1300,15 +1300,19 @@
         var el = document.getElementById(t.id);
         if (!el) return;
         el.addEventListener('targetFound', function() {
+          if (navActive) return;
           currentTarget = t;
           clearTimeout(hideTimeout);
           document.getElementById('badge-dot').style.background = t.color;
           document.getElementById('badge-name').textContent = t.name;
           document.getElementById('dept-badge').classList.add('visible');
           document.getElementById('scan-hint').style.display = 'none';
-          hideTimeout = setTimeout(function(){ showBuildingMenu(t); }, 800);
+          hideTimeout = setTimeout(function(){
+            if (!navActive) showBuildingMenu(t);
+          }, 800);
         });
         el.addEventListener('targetLost', function() {
+          if (navActive) return;
           clearTimeout(hideTimeout);
           document.getElementById('dept-badge').classList.remove('visible');
           document.getElementById('scan-hint').style.display = '';
@@ -1337,23 +1341,24 @@
         card.style.setProperty('--rc', room.color);
         card.style.borderColor = room.color + '55';
         card.innerHTML =
-          '<div class="room-icon">' + room.icon + '</div>' +
-          '<div class="room-name">' + room.name + '</div>' +
-          '<div class="room-nav-arrow" style="color:' + room.color + '">Navigate</div>';
-        card.addEventListener('click',    function(){ selectRoom(room); });
-        card.addEventListener('touchend', function(e){ e.preventDefault(); selectRoom(room); });
+          '<div class="room-icon" style="pointer-events:none">' + room.icon + '</div>' +
+          '<div class="room-name" style="pointer-events:none">' + room.name + '</div>' +
+          '<div class="room-nav-arrow" style="color:' + room.color + ';pointer-events:none">&#9654; Navigate</div>';
+        card.addEventListener('touchstart', function(e){ e.preventDefault(); e.stopPropagation(); selectRoom(room); }, { passive: false });
+        card.addEventListener('click',      function(e){ e.preventDefault(); selectRoom(room); });
         grid.appendChild(card);
       });
       showPage('page-building');
     }
 
-    document.getElementById('building-back-btn').addEventListener('click', function(){ showPage('page-scanner'); });
+    document.getElementById('building-back-btn').addEventListener('click', function(){ navActive = false; showPage('page-scanner'); });
 
     // AR NAVIGATION ENGINE
     var navStream = null, navStepIdx = 0, navStepsArr = [], navDistTimer = null;
     var navStepTimer = null, navRoom = null, navAnimFrame = null;
 
     function selectRoom(room) {
+      navActive = true;
       navRoom = room;
       navStepsArr = ROUTES[room.id] || [];
       if (!navStepsArr.length) return;
@@ -1452,6 +1457,7 @@
     }
 
     document.getElementById('nav-exit-btn').addEventListener('click', function() {
+      navActive = false;
       clearTimeout(navDistTimer); clearTimeout(navStepTimer);
       stopNavCamera(); showPage('page-scanner');
     });
@@ -1481,9 +1487,14 @@
       }
     }
 
-    document.getElementById('arrived-home-btn').addEventListener('click', function(){ showPage('page-home'); });
+    document.getElementById('arrived-home-btn').addEventListener('click', function(){ navActive = false; showPage('page-home'); });
 
-    document.body.addEventListener('touchmove', e => e.preventDefault(), { passive: false });
+    document.body.addEventListener('touchmove', function(e) {
+      var buildingScroll = document.getElementById('rooms-grid') || document.querySelector('.building-scroll');
+      if (buildingScroll && buildingScroll.contains(e.target)) return;
+      if (e.target.closest && e.target.closest('.building-scroll')) return;
+      e.preventDefault();
+    }, { passive: false });
   </script>
 </body>
 
