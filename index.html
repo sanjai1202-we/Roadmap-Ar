@@ -1480,13 +1480,22 @@
         startNavCamera()
           .then(function(){ goToStep(0); })
           .catch(function(){ goToStep(0); });
-      }, 400);
+      }, 600);
     }
 
-    function startNavCamera() {
+    function startNavCamera(retryCount) {
+      if (typeof retryCount === 'undefined') retryCount = 0;
       return new Promise(function(resolve, reject) {
         stopNavCamera();
-        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { reject(); return; }
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          var isLocal = (window.location.protocol === 'http:' && !['localhost', '127.0.0.1'].includes(window.location.hostname));
+          var errorMsg = isLocal ? "Insecure Context (use HTTPS or localhost)" : "Camera API not supported";
+          console.error("Camera error:", errorMsg);
+          document.getElementById('nav-instruction').textContent = "CAMERA ERROR";
+          document.getElementById('nav-sub').textContent = errorMsg + ". Tap next to continue.";
+          reject(new Error(errorMsg));
+          return;
+        }
         navigator.mediaDevices.getUserMedia({
           video: { facingMode: { ideal: 'environment' }, width:{ ideal:1280 }, height:{ ideal:720 } },
           audio: false
@@ -1494,7 +1503,9 @@
           navStream = stream;
           var vid = document.getElementById('nav-camera');
           vid.srcObject = stream;
-          vid.play().catch(function(){});
+          vid.play().catch(function(e) {
+            console.error("Video play failed:", e);
+          });
           vid.addEventListener('loadedmetadata', function() {
             var c = document.getElementById('nav-canvas');
             c.width  = vid.videoWidth  || window.innerWidth;
@@ -1502,7 +1513,19 @@
             startCanvasVignette(c);
           }, { once: true });
           resolve();
-        }).catch(reject);
+        }).catch(function(err) {
+          console.error("Camera access failed (attempt " + (retryCount + 1) + "):", err);
+          if (retryCount < 1) {
+            // Wait 800ms and retry once
+            setTimeout(function() {
+              startNavCamera(retryCount + 1).then(resolve).catch(reject);
+            }, 800);
+          } else {
+            document.getElementById('nav-instruction').textContent = "CAMERA LOCKED";
+            document.getElementById('nav-sub').textContent = err.name + ": " + err.message + ". Tap next to continue.";
+            reject(err);
+          }
+        });
       });
     }
 
