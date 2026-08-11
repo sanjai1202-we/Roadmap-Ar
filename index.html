@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<title>AR Video Scanner</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html, body {
+    width:100%; height:100%; overflow:hidden;
+    background:#000; color:#fff;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+
+  /* AR container fills the whole screen — MindAR injects its own
+     <video> (camera feed) and <canvas> (three.js) into this div */
+  #ar-container {
+    position:fixed; inset:0; width:100%; height:100%;
+    background:#000;
+  }
+  #ar-container video, #ar-container canvas {
+    position:absolute; inset:0;
+    width:100% !important; height:100% !important;
+    object-fit:cover;
+  }
+
+  /* Start screen — camera access needs a user tap on most mobile
+     browsers, and it doubles as a clean loading screen */
+  #start-screen {
+    position:fixed; inset:0; z-index:50;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:22px; background:radial-gradient(ellipse at 50% 40%, #14141c 0%, #000 75%);
+    text-align:center; padding:24px;
+    transition:opacity .4s ease, visibility .4s ease;
+  }
+  #start-screen.hidden { opacity:0; visibility:hidden; pointer-events:none; }
+
+  .title { font-size:clamp(24px,7vw,34px); font-weight:700; letter-spacing:.02em; }
+  .subtitle { font-size:14px; color:rgba(255,255,255,.55); max-width:320px; line-height:1.5; }
+
+  #start-btn {
+    margin-top:10px; padding:16px 40px; border:none; border-radius:999px;
+    background:#f5c842; color:#111; font-size:16px; font-weight:700;
+    letter-spacing:.04em; cursor:pointer;
+  }
+  #start-btn:active { transform:scale(.96); }
+  #start-btn:disabled { opacity:.5; }
+
+  .spinner {
+    width:34px; height:34px; border-radius:50%;
+    border:3px solid rgba(255,255,255,.15); border-top-color:#f5c842;
+    animation:spin 1s linear infinite; display:none;
+  }
+  #start-screen.loading .spinner { display:block; }
+  #start-screen.loading #start-btn { display:none; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+
+  #error-msg { color:#ff6b6b; font-size:13px; max-width:300px; display:none; }
+
+  /* Scanning overlay — shown until a target is found */
+  #scan-ui {
+    position:fixed; inset:0; z-index:20;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    pointer-events:none; opacity:0; transition:opacity .3s ease;
+  }
+  #scan-ui.visible { opacity:1; }
+
+  .scan-frame { width:min(66vw,280px); height:min(66vw,280px); position:relative; }
+  .scan-frame span { position:absolute; width:34px; height:34px; border:3px solid #f5c842; }
+  .scan-frame span:nth-child(1){ top:0; left:0; border-right:none; border-bottom:none; }
+  .scan-frame span:nth-child(2){ top:0; right:0; border-left:none; border-bottom:none; }
+  .scan-frame span:nth-child(3){ bottom:0; left:0; border-right:none; border-top:none; }
+  .scan-frame span:nth-child(4){ bottom:0; right:0; border-left:none; border-top:none; }
+
+  .scan-line {
+    position:absolute; left:6%; right:6%; height:2px; top:0;
+    background:linear-gradient(90deg, transparent, #f5c842, transparent);
+    animation:scanmove 2.2s ease-in-out infinite;
+  }
+  @keyframes scanmove { 0%,100%{ top:6%; } 50%{ top:94%; } }
+
+  #scan-label {
+    margin-top:22px; font-size:14px; font-weight:600; letter-spacing:.08em;
+    text-transform:uppercase; color:#f5c842; text-shadow:0 2px 8px rgba(0,0,0,.8);
+  }
+
+  /* Top bar — back / status / mute */
+  #top-bar {
+    position:fixed; top:0; left:0; right:0; z-index:30;
+    padding:max(16px, env(safe-area-inset-top)) 16px 16px;
+    display:flex; align-items:center; justify-content:space-between;
+    background:linear-gradient(rgba(0,0,0,.55), transparent);
+    opacity:0; transition:opacity .4s ease; pointer-events:none;
+  }
+  #top-bar.visible { opacity:1; pointer-events:auto; }
+
+  .icon-btn {
+    width:42px; height:42px; border-radius:50%; border:none;
+    background:rgba(20,20,20,.55); backdrop-filter:blur(6px);
+    color:#fff; font-size:18px; display:flex; align-items:center; justify-content:center;
+    cursor:pointer;
+  }
+  .icon-btn:active { transform:scale(.92); }
+
+  #found-pill {
+    padding:8px 16px; border-radius:999px; background:rgba(20,20,20,.55);
+    backdrop-filter:blur(6px); font-size:12px; font-weight:700; letter-spacing:.08em;
+    text-transform:uppercase; display:flex; align-items:center; gap:8px;
+    opacity:0; transform:translateY(-8px); transition:opacity .3s, transform .3s;
+  }
+  #found-pill.visible { opacity:1; transform:translateY(0); }
+  #found-pill .dot { width:8px; height:8px; border-radius:50%; background:#4ade80; box-shadow:0 0 8px #4ade80; }
+</style>
+</head>
+<body>
+
+  <div id="ar-container"></div>
+
+  <!-- scanning frame, shown while no target is locked -->
+  <div id="scan-ui">
+    <div class="scan-frame">
+      <span></span><span></span><span></span><span></span>
+      <div class="scan-line"></div>
+    </div>
+    <div id="scan-label">Point camera at the target</div>
+  </div>
+
+  <div id="top-bar">
+    <button id="back-btn" class="icon-btn" title="Reload">⟳</button>
+    <div id="found-pill"><span class="dot"></span>Target found</div>
+    <button id="mute-btn" class="icon-btn" title="Mute">🔊</button>
+  </div>
+
+  <div id="start-screen">
+    <div class="title">AR Video Scanner</div>
+    <div class="subtitle">Point your camera at the target image to watch the video appear in AR, floating right in front of you.</div>
+    <button id="start-btn">Start Scanning</button>
+    <div class="spinner"></div>
+    <div id="error-msg"></div>
+  </div>
+
+  <script type="module">
+    import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
+    import { MindARThree } from "https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-three.prod.js";
+
+    const startScreen = document.getElementById('start-screen');
+    const startBtn     = document.getElementById('start-btn');
+    const errorMsg     = document.getElementById('error-msg');
+    const scanUI       = document.getElementById('scan-ui');
+    const topBar       = document.getElementById('top-bar');
+    const foundPill    = document.getElementById('found-pill');
+    const muteBtn      = document.getElementById('mute-btn');
+    const backBtn      = document.getElementById('back-btn');
+
+    let mindarThree, video, isMuted = false;
+
+    async function startExperience() {
+      startBtn.disabled = true;
+      startScreen.classList.add('loading');
+      errorMsg.style.display = 'none';
+
+      try {
+        mindarThree = new MindARThree({
+          container: document.querySelector("#ar-container"),
+          imageTargetSrc: './targets.mind',
+          uiScanning: false,
+          uiLoading: false,
+        });
+
+        const { renderer, scene, camera } = mindarThree;
+        renderer.setPixelRatio(window.devicePixelRatio);
+
+        // Soft light so the video plane isn't washed out if a lit material is used
+        scene.add(new THREE.AmbientLight(0xffffff, 1));
+
+        const anchor = mindarThree.addAnchor(0);
+
+        // Floating video plane
+        video = document.createElement('video');
+        video.src = './video.mp4';
+        video.crossOrigin = 'anonymous';
+        video.loop = true;
+        video.muted = false;
+        video.playsInline = true;
+        video.setAttribute('webkit-playsinline', 'true');
+
+        const videoTexture = new THREE.VideoTexture(video);
+        videoTexture.colorSpace = THREE.SRGBColorSpace;
+
+        const geometry = new THREE.PlaneGeometry(1, 1);
+        const material = new THREE.MeshBasicMaterial({
+          map: videoTexture,
+          side: THREE.DoubleSide,
+          toneMapped: false,
+        });
+        const plane = new THREE.Mesh(geometry, material);
+        plane.position.set(0, 0.35, 0.15); // sits slightly above & in front of the target
+        anchor.group.add(plane);
+
+        // Fix the plane's aspect ratio once we know the real video size
+        video.addEventListener('loadedmetadata', () => {
+          const aspect = video.videoWidth / video.videoHeight || 16 / 9;
+          plane.scale.set(aspect, 1, 1);
+        });
+
+        anchor.onTargetFound = () => {
+          foundPill.classList.add('visible');
+          scanUI.classList.remove('visible');
+          video.currentTime = 0;
+          video.play().catch(() => {});
+        };
+        anchor.onTargetLost = () => {
+          foundPill.classList.remove('visible');
+          scanUI.classList.add('visible');
+          video.pause();
+        };
+
+        await mindarThree.start();
+
+        const clock = new THREE.Clock();
+        renderer.setAnimationLoop(() => {
+          const t = clock.getElapsedTime();
+          // gentle floating bob + slow spin so it reads as "floating"
+          plane.position.y = 0.35 + Math.sin(t * 1.4) * 0.06;
+          plane.rotation.y = Math.sin(t * 0.6) * 0.12;
+          renderer.render(scene, camera);
+        });
+
+        // camera is live — hide start screen, show scan frame
+        startScreen.classList.add('hidden');
+        topBar.classList.add('visible');
+        scanUI.classList.add('visible');
+
+      } catch (err) {
+        console.error(err);
+        startScreen.classList.remove('loading');
+        startBtn.disabled = false;
+        errorMsg.style.display = 'block';
+        errorMsg.textContent = 'Camera access failed: ' + (err && err.message ? err.message : err) +
+          '. Make sure you allowed camera permission and are on HTTPS (or localhost).';
+      }
+    }
+
+    startBtn.addEventListener('click', startExperience);
+
+    muteBtn.addEventListener('click', () => {
+      isMuted = !isMuted;
+      if (video) video.muted = isMuted;
+      muteBtn.textContent = isMuted ? '🔇' : '🔊';
+    });
+
+    backBtn.addEventListener('click', () => {
+      window.location.reload();
+    });
+  </script>
+</body>
+</html>
