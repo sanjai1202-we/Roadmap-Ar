@@ -139,7 +139,7 @@
   <div id="top-bar">
     <button id="back-btn" class="icon-btn" title="Reload">⟳</button>
     <div id="found-pill"><span class="dot"></span>Target found</div>
-    <button id="mute-btn" class="icon-btn" title="Mute">🔊</button>
+    <button id="mute-btn" class="icon-btn" title="Unmute">🔇</button>
   </div>
 
   <div id="start-screen">
@@ -268,9 +268,15 @@
         video.src = './video.mp4';
         video.crossOrigin = 'anonymous';
         video.loop = true;
-        video.muted = false;
+        // Start MUTED: browsers block unmuted autoplay when play() isn't called
+        // directly inside a click handler (onTargetFound fires later, async),
+        // so unmuted play() was silently failing and leaving a black plane.
+        video.muted = true;
+        video.setAttribute('muted', '');
+        isMuted = true;
         video.playsInline = true;
         video.setAttribute('webkit-playsinline', 'true');
+        video.load();
         video.addEventListener('error', () => {
           log('warning: video.mp4 failed to load (' + (video.error ? video.error.code : '?') + ') — check it exists next to index.html');
         });
@@ -297,7 +303,10 @@
           foundPill.classList.add('visible');
           scanUI.classList.remove('visible');
           video.currentTime = 0;
-          video.play().catch(() => {});
+          video.play().catch((e) => {
+            console.error('video.play() failed:', e);
+            document.getElementById('scan-label').textContent = 'Video failed to play: ' + e.message;
+          });
         };
         anchor.onTargetLost = () => {
           foundPill.classList.remove('visible');
