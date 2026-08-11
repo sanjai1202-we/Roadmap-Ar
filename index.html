@@ -6,6 +6,15 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <title>AR Video Scanner</title>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/",
+    "mindar-image-three": "https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-three.prod.js"
+  }
+}
+</script>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
   html, body {
@@ -138,12 +147,37 @@
     <div class="subtitle">Point your camera at the target image to watch the video appear in AR, floating right in front of you.</div>
     <button id="start-btn">Start Scanning</button>
     <div class="spinner"></div>
+    <div id="debug-status" style="font-size:12px;color:rgba(255,255,255,.4);min-height:16px;"></div>
     <div id="error-msg"></div>
   </div>
 
+  <script>
+    // Guard against the two most common silent-freeze causes: opening the
+    // file directly (file://) instead of serving it, and module load errors.
+    (function () {
+      var errorMsg = document.getElementById('error-msg');
+      function showFatal(msg) {
+        document.getElementById('start-screen').classList.remove('loading');
+        var btn = document.getElementById('start-btn');
+        if (btn) btn.disabled = false;
+        errorMsg.style.display = 'block';
+        errorMsg.textContent = msg;
+      }
+      if (location.protocol === 'file:') {
+        showFatal('This page must be served over http(s), not opened as a local file. Run a local server (e.g. "npx serve .") or use your HTTPS-hosted URL.');
+      }
+      window.addEventListener('error', function (e) {
+        if (e && e.message) showFatal('Script error: ' + e.message);
+      });
+      window.addEventListener('unhandledrejection', function (e) {
+        showFatal('Error: ' + (e.reason && e.reason.message ? e.reason.message : e.reason));
+      });
+    })();
+  </script>
+
   <script type="module">
-    import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
-    import { MindARThree } from "https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-three.prod.js";
+    import * as THREE from "three";
+    import { MindARThree } from "mindar-image-three";
 
     const startScreen = document.getElementById('start-screen');
     const startBtn     = document.getElementById('start-btn');
@@ -155,13 +189,66 @@
     const backBtn      = document.getElementById('back-btn');
 
     let mindarThree, video, isMuted = false;
+    const debugEl = document.getElementById('debug-status');
+
+    function log(step) {
+      console.log('[AR]', step);
+      if (debugEl) debugEl.textContent = step;
+    }
+
+    function friendlyCameraError(err) {
+      const name = err && err.name;
+      if (name === 'NotAllowedError' || name === 'PermissionDeniedError')
+        return 'Camera permission was denied. Open the site settings (padlock icon in the address bar) and allow Camera, then reload.';
+      if (name === 'NotFoundError' || name === 'DevicesNotFoundError')
+        return 'No camera was found on this device.';
+      if (name === 'NotReadableError' || name === 'TrackStartError')
+        return 'The camera is already in use by another app or browser tab. Close it and try again.';
+      if (name === 'OverconstrainedError')
+        return 'No camera matched the requested settings (tried rear/environment camera).';
+      if (name === 'SecurityError')
+        return 'Camera blocked: this page must be served over HTTPS (or localhost).';
+      return (name || 'Error') + ': ' + (err && err.message ? err.message : err);
+    }
 
     async function startExperience() {
       startBtn.disabled = true;
       startScreen.classList.add('loading');
       errorMsg.style.display = 'none';
 
+      // Watchdog: if nothing has updated the status in 15s, tell the user instead of freezing forever.
+      let watchdogStep = '';
+      const watchdog = setTimeout(() => {
+        errorMsg.style.display = 'block';
+        errorMsg.textContent = 'Timed out while: "' + watchdogStep + '". Check the browser console (F12) for the real error, and confirm targets.mind / video.mp4 are reachable at their URLs.';
+        startScreen.classList.remove('loading');
+        startBtn.disabled = false;
+      }, 15000);
+      const step = (s) => { watchdogStep = s; log(s); };
+
       try {
+        // 1) Confirm targets.mind is actually reachable at this path (very common failure).
+        step('checking targets.mind is reachable…');
+        const targetsRes = await fetch('./targets.mind', { method: 'HEAD' }).catch((e) => { throw new Error('targets.mind fetch failed: ' + e.message); });
+        if (!targetsRes.ok) throw new Error('targets.mind returned HTTP ' + targetsRes.status + ' — check the file exists next to index.html');
+
+        // 2) Explicitly request camera permission first, so any denial/error is caught
+        //    with a clear message rather than hanging inside MindAR internals.
+        step('requesting camera permission…');
+        let preflightStream;
+        try {
+          preflightStream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: { ideal: 'environment' } },
+            audio: false,
+          });
+        } catch (permErr) {
+          throw new Error(friendlyCameraError(permErr));
+        }
+        // release it immediately — MindAR opens its own stream next
+        preflightStream.getTracks().forEach((t) => t.stop());
+
+        // 3) Boot MindAR.
+        step('starting AR engine…');
         mindarThree = new MindARThree({
           container: document.querySelector("#ar-container"),
           imageTargetSrc: './targets.mind',
@@ -172,7 +259,6 @@
         const { renderer, scene, camera } = mindarThree;
         renderer.setPixelRatio(window.devicePixelRatio);
 
-        // Soft light so the video plane isn't washed out if a lit material is used
         scene.add(new THREE.AmbientLight(0xffffff, 1));
 
         const anchor = mindarThree.addAnchor(0);
@@ -185,6 +271,9 @@
         video.muted = false;
         video.playsInline = true;
         video.setAttribute('webkit-playsinline', 'true');
+        video.addEventListener('error', () => {
+          log('warning: video.mp4 failed to load (' + (video.error ? video.error.code : '?') + ') — check it exists next to index.html');
+        });
 
         const videoTexture = new THREE.VideoTexture(video);
         videoTexture.colorSpace = THREE.SRGBColorSpace;
@@ -199,7 +288,6 @@
         plane.position.set(0, 0.35, 0.15); // sits slightly above & in front of the target
         anchor.group.add(plane);
 
-        // Fix the plane's aspect ratio once we know the real video size
         video.addEventListener('loadedmetadata', () => {
           const aspect = video.videoWidth / video.videoHeight || 16 / 9;
           plane.scale.set(aspect, 1, 1);
@@ -217,12 +305,15 @@
           video.pause();
         };
 
+        step('opening camera feed…');
         await mindarThree.start();
+
+        clearTimeout(watchdog);
+        step('');
 
         const clock = new THREE.Clock();
         renderer.setAnimationLoop(() => {
           const t = clock.getElapsedTime();
-          // gentle floating bob + slow spin so it reads as "floating"
           plane.position.y = 0.35 + Math.sin(t * 1.4) * 0.06;
           plane.rotation.y = Math.sin(t * 0.6) * 0.12;
           renderer.render(scene, camera);
@@ -234,12 +325,12 @@
         scanUI.classList.add('visible');
 
       } catch (err) {
+        clearTimeout(watchdog);
         console.error(err);
         startScreen.classList.remove('loading');
         startBtn.disabled = false;
         errorMsg.style.display = 'block';
-        errorMsg.textContent = 'Camera access failed: ' + (err && err.message ? err.message : err) +
-          '. Make sure you allowed camera permission and are on HTTPS (or localhost).';
+        errorMsg.textContent = err && err.message ? err.message : String(err);
       }
     }
 
