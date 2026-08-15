@@ -22,30 +22,24 @@
     background:#000; color:#fff;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   }
-
-  /* AR container fills the whole screen — MindAR injects its own wrapper
-     div plus a <video> (camera feed) and <canvas> (three.js) into this.
-     MindAR's wrapper is sized to the camera stream's native resolution,
-     which causes a letterboxed black bar unless every level is forced
-     full-bleed — not just the video/canvas themselves. */
+ 
+  /* AR container fills the whole screen. MindAR injects its own wrapper div
+     plus a <video> (camera feed) and <canvas> (three.js) into this — every
+     level needs forcing full-bleed, not just video/canvas, or a letterboxed
+     black bar shows up (known MindAR/iOS Safari quirk). */
   #ar-container {
     position:fixed; inset:0; width:100%; height:100%;
     overflow:hidden; background:#000;
+    /* small overscan: pushes any leftover letterbox margin off-screen */
+    transform: scale(1.2); transform-origin: center center;
   }
-  #ar-container > div {
-    position:absolute !important; inset:0 !important;
-    width:100% !important; height:100% !important;
-    max-width:none !important; max-height:none !important;
-  }
-  #ar-container video, #ar-container canvas {
+  #ar-container > div, #ar-container video, #ar-container canvas {
     position:absolute !important; inset:0 !important;
     width:100% !important; height:100% !important;
     max-width:none !important; max-height:none !important;
     object-fit:cover !important;
   }
-
-  /* Start screen — camera access needs a user tap on most mobile
-     browsers, and it doubles as a clean loading screen */
+ 
   #start-screen {
     position:fixed; inset:0; z-index:50;
     display:flex; flex-direction:column; align-items:center; justify-content:center;
@@ -54,10 +48,10 @@
     transition:opacity .4s ease, visibility .4s ease;
   }
   #start-screen.hidden { opacity:0; visibility:hidden; pointer-events:none; }
-
+ 
   .title { font-size:clamp(24px,7vw,34px); font-weight:700; letter-spacing:.02em; }
   .subtitle { font-size:14px; color:rgba(255,255,255,.55); max-width:320px; line-height:1.5; }
-
+ 
   #start-btn {
     margin-top:10px; padding:16px 40px; border:none; border-radius:999px;
     background:#f5c842; color:#111; font-size:16px; font-weight:700;
@@ -65,7 +59,7 @@
   }
   #start-btn:active { transform:scale(.96); }
   #start-btn:disabled { opacity:.5; }
-
+ 
   .spinner {
     width:34px; height:34px; border-radius:50%;
     border:3px solid rgba(255,255,255,.15); border-top-color:#f5c842;
@@ -74,106 +68,41 @@
   #start-screen.loading .spinner { display:block; }
   #start-screen.loading #start-btn { display:none; }
   @keyframes spin { to { transform:rotate(360deg); } }
-
-  #error-msg { color:#ff6b6b; font-size:13px; max-width:300px; display:none; }
-
-  /* Scanning overlay — shown until a target is found */
-  #scan-ui {
-    position:fixed; inset:0; z-index:20;
-    display:flex; flex-direction:column; align-items:center; justify-content:center;
-    pointer-events:none; opacity:0; transition:opacity .3s ease;
-  }
-  #scan-ui.visible { opacity:1; }
-
-  .scan-frame { width:min(66vw,280px); height:min(66vw,280px); position:relative; }
-  .scan-frame span { position:absolute; width:34px; height:34px; border:3px solid #f5c842; }
-  .scan-frame span:nth-child(1){ top:0; left:0; border-right:none; border-bottom:none; }
-  .scan-frame span:nth-child(2){ top:0; right:0; border-left:none; border-bottom:none; }
-  .scan-frame span:nth-child(3){ bottom:0; left:0; border-right:none; border-top:none; }
-  .scan-frame span:nth-child(4){ bottom:0; right:0; border-left:none; border-top:none; }
-
-  .scan-line {
-    position:absolute; left:6%; right:6%; height:2px; top:0;
-    background:linear-gradient(90deg, transparent, #f5c842, transparent);
-    animation:scanmove 2.2s ease-in-out infinite;
-  }
-  @keyframes scanmove { 0%,100%{ top:6%; } 50%{ top:94%; } }
-
-  #scan-label {
-    margin-top:22px; font-size:14px; font-weight:600; letter-spacing:.08em;
-    text-transform:uppercase; color:#f5c842; text-shadow:0 2px 8px rgba(0,0,0,.8);
-  }
-
-  /* Top bar — back / status / mute */
-  #top-bar {
-    position:fixed; top:0; left:0; right:0; z-index:30;
-    padding:max(16px, env(safe-area-inset-top)) 16px 16px;
-    display:flex; align-items:center; justify-content:space-between;
-    background:linear-gradient(rgba(0,0,0,.55), transparent);
-    opacity:0; transition:opacity .4s ease; pointer-events:none;
-  }
-  #top-bar.visible { opacity:1; pointer-events:auto; }
-
-  .icon-btn {
-    width:42px; height:42px; border-radius:50%; border:none;
-    background:rgba(20,20,20,.55); backdrop-filter:blur(6px);
-    color:#fff; font-size:18px; display:flex; align-items:center; justify-content:center;
-    cursor:pointer;
-  }
-  .icon-btn:active { transform:scale(.92); }
-
-  #found-pill {
-    padding:8px 16px; border-radius:999px; background:rgba(20,20,20,.55);
-    backdrop-filter:blur(6px); font-size:12px; font-weight:700; letter-spacing:.08em;
-    text-transform:uppercase; display:flex; align-items:center; gap:8px;
-    opacity:0; transform:translateY(-8px); transition:opacity .3s, transform .3s;
-  }
-  #found-pill.visible { opacity:1; transform:translateY(0); }
-  #found-pill .dot { width:8px; height:8px; border-radius:50%; background:#4ade80; box-shadow:0 0 8px #4ade80; }
+ 
+  #debug-status { font-size:12px; color:rgba(255,255,255,.4); min-height:16px; }
+  #error-msg { color:#ff6b6b; font-size:13px; max-width:320px; display:none; white-space:pre-wrap; }
 </style>
 </head>
 <body>
-
+ 
   <div id="ar-container"></div>
-
-  <!-- scanning frame, shown while no target is locked -->
-  <div id="scan-ui">
-    <div class="scan-frame">
-      <span></span><span></span><span></span><span></span>
-      <div class="scan-line"></div>
-    </div>
-    <div id="scan-label">Point camera at the target</div>
-  </div>
-
-  <div id="top-bar">
-    <button id="back-btn" class="icon-btn" title="Reload">⟳</button>
-    <div id="found-pill"><span class="dot"></span>Target found</div>
-    <button id="mute-btn" class="icon-btn" title="Unmute">🔇</button>
-  </div>
-
+ 
   <div id="start-screen">
     <div class="title">AR Video Scanner</div>
-    <div class="subtitle">Point your camera at the target image to watch the video appear in AR, floating right in front of you.</div>
+    <div class="subtitle">Point your camera at the billboard image to watch the video play exactly over it, life-size.</div>
     <button id="start-btn">Start Scanning</button>
     <div class="spinner"></div>
-    <div id="debug-status" style="font-size:12px;color:rgba(255,255,255,.4);min-height:16px;"></div>
+    <div id="debug-status"></div>
     <div id="error-msg"></div>
   </div>
-
+ 
   <script>
-    // Guard against the two most common silent-freeze causes: opening the
-    // file directly (file://) instead of serving it, and module load errors.
+    // Catches failures that happen BEFORE the module script's own try/catch
+    // can run — a blocked/broken CDN import, or opening via file:// — which
+    // otherwise makes the Start button silently do nothing.
     (function () {
-      var errorMsg = document.getElementById('error-msg');
       function showFatal(msg) {
-        document.getElementById('start-screen').classList.remove('loading');
+        var s = document.getElementById('start-screen');
         var btn = document.getElementById('start-btn');
+        var err = document.getElementById('error-msg');
+        s.classList.remove('loading');
+        s.classList.remove('hidden');
         if (btn) btn.disabled = false;
-        errorMsg.style.display = 'block';
-        errorMsg.textContent = msg;
+        err.style.display = 'block';
+        err.textContent = msg;
       }
       if (location.protocol === 'file:') {
-        showFatal('This page must be served over http(s), not opened as a local file. Run a local server (e.g. "npx serve .") or use your HTTPS-hosted URL.');
+        showFatal('This page must be served over http(s), not opened as a local file (e.g. GitHub Pages, or "npx serve .").');
       }
       window.addEventListener('error', function (e) {
         if (e && e.message) showFatal('Script error: ' + e.message);
@@ -181,30 +110,28 @@
       window.addEventListener('unhandledrejection', function (e) {
         showFatal('Error: ' + (e.reason && e.reason.message ? e.reason.message : e.reason));
       });
+      document.addEventListener('error', function (ev) {
+        if (ev.target && ev.target.tagName === 'SCRIPT') {
+          showFatal('Could not load ' + (ev.target.src || 'a script') + ' — check your internet connection or that the CDN isn\'t blocked.');
+        }
+      }, true); // capture phase — resource load errors don't bubble
     })();
   </script>
-
+ 
   <script type="module">
     import * as THREE from "three";
     import { MindARThree } from "mindar-image-three";
-
+ 
     const startScreen = document.getElementById('start-screen');
     const startBtn     = document.getElementById('start-btn');
     const errorMsg     = document.getElementById('error-msg');
-    const scanUI       = document.getElementById('scan-ui');
-    const topBar       = document.getElementById('top-bar');
-    const foundPill    = document.getElementById('found-pill');
-    const muteBtn      = document.getElementById('mute-btn');
-    const backBtn      = document.getElementById('back-btn');
-
-    let mindarThree, video, isMuted = false;
-    const debugEl = document.getElementById('debug-status');
-
+    const debugEl      = document.getElementById('debug-status');
+ 
     function log(step) {
       console.log('[AR]', step);
       if (debugEl) debugEl.textContent = step;
     }
-
+ 
     function friendlyCameraError(err) {
       const name = err && err.name;
       if (name === 'NotAllowedError' || name === 'PermissionDeniedError')
@@ -219,30 +146,34 @@
         return 'Camera blocked: this page must be served over HTTPS (or localhost).';
       return (name || 'Error') + ': ' + (err && err.message ? err.message : err);
     }
-
+ 
+    // Target billboard's real aspect ratio (height / width). Measured from
+    // the banner image (1657 × 949 px). Update this if you use a different image.
+    const TARGET_ASPECT = 949 / 1657;
+ 
+    // If the video plays sideways, set this to 90, 180, or 270.
+    const VIDEO_ROTATION_DEG = 0;
+ 
     async function startExperience() {
       startBtn.disabled = true;
       startScreen.classList.add('loading');
       errorMsg.style.display = 'none';
-
-      // Watchdog: if nothing has updated the status in 15s, tell the user instead of freezing forever.
+ 
       let watchdogStep = '';
       const watchdog = setTimeout(() => {
         errorMsg.style.display = 'block';
-        errorMsg.textContent = 'Timed out while: "' + watchdogStep + '". Check the browser console (F12) for the real error, and confirm targets.mind / video.mp4 are reachable at their URLs.';
+        errorMsg.textContent = 'Timed out while: "' + watchdogStep + '". Check the browser console (F12) for the real error.';
         startScreen.classList.remove('loading');
         startBtn.disabled = false;
       }, 15000);
       const step = (s) => { watchdogStep = s; log(s); };
-
+ 
       try {
-        // 1) Confirm targets.mind is actually reachable at this path (very common failure).
         step('checking targets.mind is reachable…');
-        const targetsRes = await fetch('./targets.mind', { method: 'HEAD' }).catch((e) => { throw new Error('targets.mind fetch failed: ' + e.message); });
-        if (!targetsRes.ok) throw new Error('targets.mind returned HTTP ' + targetsRes.status + ' — check the file exists next to index.html');
-
-        // 2) Explicitly request camera permission first, so any denial/error is caught
-        //    with a clear message rather than hanging inside MindAR internals.
+        const targetsRes = await fetch('./targets.mind', { method: 'HEAD' })
+          .catch((e) => { throw new Error('targets.mind fetch failed: ' + e.message); });
+        if (!targetsRes.ok) throw new Error('targets.mind returned HTTP ' + targetsRes.status);
+ 
         step('requesting camera permission…');
         let preflightStream;
         try {
@@ -253,169 +184,95 @@
         } catch (permErr) {
           throw new Error(friendlyCameraError(permErr));
         }
-        // release it immediately — MindAR opens its own stream next
         preflightStream.getTracks().forEach((t) => t.stop());
-
-        // 3) Boot MindAR.
+ 
         step('starting AR engine…');
-        mindarThree = new MindARThree({
+        const mindarThree = new MindARThree({
           container: document.querySelector("#ar-container"),
           imageTargetSrc: './targets.mind',
           uiScanning: false,
           uiLoading: false,
-          // Smoothing: lower filterBeta = less jittery (more lag); this trades
-          // a small amount of responsiveness for a much steadier lock.
           filterMinCF: 0.0001,
           filterBeta: 50,
           warmupTolerance: 3,
           missTolerance: 5,
         });
-
         const { renderer, scene, camera } = mindarThree;
         renderer.setPixelRatio(window.devicePixelRatio);
-
-        scene.add(new THREE.AmbientLight(0xffffff, 1));
-        const keyLight = new THREE.DirectionalLight(0xffffff, 0.6);
-        keyLight.position.set(0.5, 1, 1);
-        scene.add(keyLight);
-
+ 
         const anchor = mindarThree.addAnchor(0);
-
-        // ── Group that holds the whole floating card so we can move/scale
-        // everything together (video + frame + shadow + stem) as one unit ──
-        const CARD_H = 0.5;      // card height, relative to the marker's real-world width
-        const MARKER_EDGE = 0.5; // assume marker ~square; top edge sits at y = 0.5
-        const GAP = 0.14;        // visible gap between marker and card, for the stem
-        const CARD_Y = MARKER_EDGE + GAP + CARD_H / 2;
-
-        const cardGroup = new THREE.Group();
-        cardGroup.position.set(0, CARD_Y, 0.16); // sits above & in front of the target
-        cardGroup.scale.set(0.001, 0.001, 0.001); // start collapsed, pop in on found
-        anchor.group.add(cardGroup);
-
-        video = document.createElement('video');
+ 
+        const video = document.createElement('video');
         video.src = './video.mp4';
         video.crossOrigin = 'anonymous';
         video.loop = true;
-        // Start MUTED: browsers block unmuted autoplay when play() isn't called
-        // directly inside a click handler (onTargetFound fires later, async),
-        // so unmuted play() was silently failing and leaving a black plane.
-        video.muted = true;
-        video.setAttribute('muted', '');
-        isMuted = true;
+        video.muted = true; // required for autoplay
         video.playsInline = true;
         video.setAttribute('webkit-playsinline', 'true');
         video.load();
         video.addEventListener('error', () => {
-          log('warning: video.mp4 failed to load (' + (video.error ? video.error.code : '?') + ') — check it exists next to index.html');
+          log('warning: video.mp4 failed to load (code ' + (video.error ? video.error.code : '?') + ')');
         });
-
-        // Base unit size — everything below scales off this so frame/shadow/
-        // stem always match the video's real aspect ratio instead of looking
-        // like two mismatched, unrelated sized elements.
+ 
         const videoTexture = new THREE.VideoTexture(video);
         videoTexture.colorSpace = THREE.SRGBColorSpace;
-        let aspect = 16 / 9; // corrected once real video metadata loads
-
-        // Gold frame — slightly larger plane behind the video, like a picture
-        // frame border, sets it apart from the camera feed as a distinct object.
-        const frameGeo = new THREE.PlaneGeometry(1, 1);
-        const frameMat = new THREE.MeshStandardMaterial({ color: 0xf5c842, metalness: 0.3, roughness: 0.4 });
-        const frame = new THREE.Mesh(frameGeo, frameMat);
-        frame.position.z = -0.01;
-        cardGroup.add(frame);
-
-        // Video plane, sits just in front of the frame
-        const geometry = new THREE.PlaneGeometry(1, 1);
+        videoTexture.center.set(0.5, 0.5);
+        videoTexture.rotation = VIDEO_ROTATION_DEG * Math.PI / 180;
+ 
+        // Exact-overlay plane: sits flush on the marker, sized to match the
+        // billboard exactly — this is the "video plays in the billboard's
+        // own size" look, not a floating card.
+        const geometry = new THREE.PlaneGeometry(1, TARGET_ASPECT);
         const material = new THREE.MeshBasicMaterial({
-          map: videoTexture,
-          side: THREE.FrontSide,
-          toneMapped: false,
+          map: videoTexture, toneMapped: false, transparent: true, opacity: 0,
         });
         const plane = new THREE.Mesh(geometry, material);
-        cardGroup.add(plane);
-
-        // Soft drop shadow on the marker's surface — sells the "floating
-        // above the surface" depth cue instead of it looking pasted on screen.
-        const shadowGeo = new THREE.CircleGeometry(0.5, 32);
-        const shadowMat = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.25 });
-        const shadow = new THREE.Mesh(shadowGeo, shadowMat);
-        shadow.rotation.x = -Math.PI / 2;
-        shadow.position.set(0, 0.01, 0.05);
-        anchor.group.add(shadow);
-        shadow.visible = false;
-
-        // Thin connector "stem" from the marker's top edge up to the card, so
-        // the card reads as anchored to the marker instead of a same-scene
-        // but disconnected, differently-sized floating rectangle.
-        const stemGeo = new THREE.CylinderGeometry(0.004, 0.004, 1, 8);
-        const stemMat = new THREE.MeshBasicMaterial({ color: 0xf5c842, transparent: true, opacity: 0.55 });
-        const stem = new THREE.Mesh(stemGeo, stemMat);
-        anchor.group.add(stem);
-        stem.visible = false;
-
-        function layoutCard() {
-          plane.scale.set(aspect, CARD_H, 1);
-          frame.scale.set(aspect + 0.06, CARD_H + 0.06, 1);
-          shadow.scale.set(aspect * 0.85, 0.42, 1);
-          const stemBottom = MARKER_EDGE;
-          const stemTop = CARD_Y - CARD_H / 2;
-          const stemLen = Math.max(stemTop - stemBottom, 0.02);
-          stem.scale.set(1, stemLen, 1);
-          stem.position.set(0, stemBottom + stemLen / 2, cardGroup.position.z * 0.4);
+        plane.position.set(0, 0, 0.01); // just in front of the marker, avoids z-fighting
+        anchor.group.add(plane);
+ 
+        // Crop the video to fill the billboard exactly (like object-fit:
+        // cover) instead of stretching or leaving letterbox gaps.
+        function fitVideoCover() {
+          const rotated90 = Math.abs(VIDEO_ROTATION_DEG % 180) === 90;
+          const w = video.videoWidth || 16, h = video.videoHeight || 9;
+          const dispAspect = (rotated90 ? h : w) / (rotated90 ? w : h);
+          const planeAspect = 1 / TARGET_ASPECT;
+          let cropW = 1, cropH = 1;
+          if (dispAspect > planeAspect) cropW = planeAspect / dispAspect;
+          else cropH = dispAspect / planeAspect;
+          const rawCropW = rotated90 ? cropH : cropW;
+          const rawCropH = rotated90 ? cropW : cropH;
+          videoTexture.repeat.set(rawCropW, rawCropH);
+          videoTexture.offset.set((1 - rawCropW) / 2, (1 - rawCropH) / 2);
         }
-        layoutCard();
-
-        video.addEventListener('loadedmetadata', () => {
-          aspect = video.videoWidth / video.videoHeight || 16 / 9;
-          layoutCard();
-        });
-
-        let cardVisible = false;
+        fitVideoCover();
+        video.addEventListener('loadedmetadata', fitVideoCover);
+ 
+        let visible = false;
         anchor.onTargetFound = () => {
-          foundPill.classList.add('visible');
-          scanUI.classList.remove('visible');
-          shadow.visible = true;
-          stem.visible = true;
-          cardVisible = true;
+          visible = true;
           video.currentTime = 0;
-          video.play().catch((e) => {
-            console.error('video.play() failed:', e);
-            document.getElementById('scan-label').textContent = 'Video failed to play: ' + e.message;
-          });
+          video.play().catch((e) => console.error('video.play() failed:', e));
         };
         anchor.onTargetLost = () => {
-          foundPill.classList.remove('visible');
-          scanUI.classList.add('visible');
-          cardVisible = false;
+          visible = false;
           video.pause();
         };
-
+ 
         step('opening camera feed…');
         await mindarThree.start();
-
+ 
         clearTimeout(watchdog);
         step('');
-
-        const clock = new THREE.Clock();
-        let curScale = 0.001;
+ 
         renderer.setAnimationLoop(() => {
-          const t = clock.getElapsedTime();
-          const targetScale = cardVisible ? 1 : 0.001;
-          // ease toward target scale — smooth pop in/out instead of a hard cut
-          curScale += (targetScale - curScale) * 0.12;
-          cardGroup.scale.set(curScale, curScale, curScale);
-          // gentle, low-amplitude bob only — no rotation wobble, which was
-          // compounding with tracking jitter to look shaky
-          cardGroup.position.y = CARD_Y + Math.sin(t * 1.1) * 0.015;
+          const target = visible ? 1 : 0;
+          material.opacity += (target - material.opacity) * 0.15;
           renderer.render(scene, camera);
         });
-
-        // camera is live — hide start screen, show scan frame
+ 
         startScreen.classList.add('hidden');
-        topBar.classList.add('visible');
-        scanUI.classList.add('visible');
-
+ 
       } catch (err) {
         clearTimeout(watchdog);
         console.error(err);
@@ -425,18 +282,9 @@
         errorMsg.textContent = err && err.message ? err.message : String(err);
       }
     }
-
+ 
     startBtn.addEventListener('click', startExperience);
-
-    muteBtn.addEventListener('click', () => {
-      isMuted = !isMuted;
-      if (video) video.muted = isMuted;
-      muteBtn.textContent = isMuted ? '🔇' : '🔊';
-    });
-
-    backBtn.addEventListener('click', () => {
-      window.location.reload();
-    });
   </script>
 </body>
 </html>
+ 
